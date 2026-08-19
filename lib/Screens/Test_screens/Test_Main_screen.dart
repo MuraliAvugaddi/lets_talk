@@ -53,7 +53,8 @@ class _TestScreenState extends State<TestScreen> {
       middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
       backgroundColor: const Color(0xff181824),
       radius: 18,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       confirm: Container(
         margin: const EdgeInsets.only(bottom: 16),
         width: 120,
@@ -144,36 +145,24 @@ class _TestScreenState extends State<TestScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Assessment Portal 📝",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white54,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          "Take A Test",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.white70,
+                    Text(
+                      "Assessment Portal 📝",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white54,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
-                      onPressed: () => authController.refreshProfile(),
+                    ),
+                    Text(
+                      "Take A Test",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -219,8 +208,8 @@ class _TestScreenState extends State<TestScreen> {
                                     "English Tests",
                                     style: GoogleFonts.poppins(
                                       color: selectedTab.value == 0
-                                          ? Colors.white
-                                          : Colors.white60,
+                                        ? Colors.white
+                                        : Colors.white60,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
                                     ),
@@ -258,8 +247,8 @@ class _TestScreenState extends State<TestScreen> {
                                     "Hindi Tests",
                                     style: GoogleFonts.poppins(
                                       color: selectedTab.value == 1
-                                          ? Colors.white
-                                          : Colors.white60,
+                                        ? Colors.white
+                                        : Colors.white60,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
                                     ),
@@ -293,8 +282,10 @@ class _TestScreenState extends State<TestScreen> {
                 ),
                 child: Obx(() {
                   final isEnglish = selectedTab.value == 0;
-                  final currentList = isEnglish ? englishStages : hindiStages;
-                  final activeAccent = isEnglish ? accentPurple : accentBlue;
+                  final currentList =
+                      isEnglish ? englishStages : hindiStages;
+                  final activeAccent =
+                      isEnglish ? accentPurple : accentBlue;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +320,8 @@ class _TestScreenState extends State<TestScreen> {
                         physics: const NeverScrollableScrollPhysics(),
                         padding: EdgeInsets.zero,
                         itemCount: currentList.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final item = currentList[index];
                           final int stageNum = item["stage"];
@@ -398,7 +390,6 @@ class _TestScreenState extends State<TestScreen> {
         ),
         child: Row(
           children: [
-            // Stage Number Badge
             Container(
               width: 44,
               height: 44,
@@ -426,7 +417,6 @@ class _TestScreenState extends State<TestScreen> {
             ),
             const SizedBox(width: 14),
 
-            // Title & Subtitle
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +441,6 @@ class _TestScreenState extends State<TestScreen> {
               ),
             ),
 
-            // Lock / Start Action Icon
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

@@ -7,16 +7,15 @@ class EnglishStage2Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xff0A0A0E),
       appBar: AppBar(
         backgroundColor: const Color(0xff7F56D9),
         title: const Text("English Material 2"),
       ),
       body: Column(
-        children: [
-          // This adds the attendance logic specifically for Stage 2
-          const StageAttendanceWidget(stageName: "Stage 2"),
-
-          const Expanded(child: Center(child: Text("Leerial for Stage 2..."))),
+        children: const [
+          StageAttendanceWidget(stageName: "Stage 2"),
+          Expanded(child: Center(child: Text("English Stage 2 Content...", style: TextStyle(color: Colors.white)))),
         ],
       ),
     );

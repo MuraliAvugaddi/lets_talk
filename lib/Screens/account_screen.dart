@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Screens/student_attendance_screen.dart';
+import 'package:lets_talk/Screens/student_test_results_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AccountScreen extends StatelessWidget {
@@ -31,6 +32,7 @@ class AccountScreen extends StatelessWidget {
     const Color backgroundColor = Color(0xff0A0A0E);
     const Color cardColor = Color(0xff14141E);
     const Color accentPurple = Color(0xff7F56D9);
+    const Color accentBlue = Color(0xff158DFE);
     const Color accentGreen = Color(0xff25D366);
 
     return Scaffold(
@@ -133,7 +135,6 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 14),
 
-                    // User Name
                     Obx(
                       () => Text(
                         controller.userData['name'] ?? "User Name",
@@ -147,7 +148,6 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
 
-                    // Phone
                     Obx(
                       () => Text(
                         controller.userData['phone'] ?? "N/A",
@@ -160,7 +160,6 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
 
-                    // Mode Tag Pill
                     Obx(() {
                       String mode = controller.userData['mode'] ?? "online";
                       bool isOnline = mode.toLowerCase() == "online";
@@ -224,13 +223,6 @@ class AccountScreen extends StatelessWidget {
                     color: cardColor,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: accentPurple.withOpacity(0.35)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accentPurple.withOpacity(0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Row(
                     children: [
@@ -280,9 +272,70 @@ class AccountScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // --- 3. COMMUNITY INVITATION CARD ---
+              // --- 3. TEST RESULTS NAVIGATION CARD ---
+              GestureDetector(
+                onTap: () => Get.to(() => const StudentTestResultsScreen()),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: accentBlue.withOpacity(0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: accentBlue.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.leaderboard_rounded,
+                          color: accentBlue,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Test Results & Scores",
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "Review stage-wise exam marks & percentage",
+                              style: GoogleFonts.poppins(
+                                color: Colors.white60,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: accentBlue,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // --- 4. COMMUNITY INVITATION CARD ---
               GestureDetector(
                 onTap: _launchCommunityLink,
                 child: Container(
@@ -349,7 +402,7 @@ class AccountScreen extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              // --- 4. LOGOUT BUTTON ---
+              // --- 5. LOGOUT BUTTON ---
               SizedBox(
                 width: double.infinity,
                 height: 52,

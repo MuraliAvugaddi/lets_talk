@@ -165,44 +165,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
           isTestActive = false;
         });
 
-        Get.defaultDialog(
-          title: "Assessment Completed!",
-          backgroundColor: const Color(0xff181824),
-          titleStyle: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-          radius: 16,
-          content: Column(
-            children: [
-              const SizedBox(height: 8),
-              Text(
-                "Great job finishing the exam!",
-                style: GoogleFonts.poppins(color: Colors.white60, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                "Your Final Score",
-                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                "$myScore / $totalQs",
-                style: GoogleFonts.poppins(
-                  fontSize: 38,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.greenAccent,
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-          textConfirm: "Done",
-          confirmTextColor: Colors.white,
-          buttonColor: const Color(0xff7F56D9),
-          onConfirm: () => Get.back(),
-        );
+        _showSuccessDialog();
       } else {
         Get.snackbar("Error", "Submission error: ${response.statusCode}");
       }
@@ -211,10 +174,113 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
     }
   }
 
+  void _showSuccessDialog() {
+    final double percentage = totalQs > 0 ? (myScore / totalQs) * 100 : 0.0;
+    final bool isPassed = percentage >= 50;
+
+    Get.defaultDialog(
+      title: "",
+      titlePadding: EdgeInsets.zero,
+      backgroundColor: const Color(0xff14141E),
+      radius: 20,
+      contentPadding: const EdgeInsets.all(20),
+      content: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isPassed
+                  ? Colors.greenAccent.withOpacity(0.15)
+                  : Colors.orangeAccent.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPassed ? Icons.emoji_events_rounded : Icons.replay_rounded,
+              color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+              size: 44,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isPassed ? "Assessment Passed!" : "Exam Finished!",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Your score has been updated in your profile.",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xff0A0A0E),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  "Final Marks",
+                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "$myScore / $totalQs",
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                  ),
+                ),
+                Text(
+                  "${percentage.toStringAsFixed(0)}% Accuracy",
+                  style: TextStyle(
+                    color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              onPressed: () => Get.back(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff7F56D9),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                "Return to Dashboard",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color backgroundColor = const Color(0xff0D0D12);
-    final Color cardColor = const Color(0xff181824);
+    final Color backgroundColor = const Color(0xff0A0A0E);
+    final Color cardColor = const Color(0xff14141E);
     final Color accentPurple = const Color(0xff7F56D9);
 
     if (isLoading) {
@@ -224,14 +290,32 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       );
     }
 
-    // --- VIEW 1: ALREADY TAKEN ---
+    // --- VIEW 1: ALREADY TAKEN (Clean Modern Card) ---
     if (isAlreadyTaken) {
+      final double percentage = totalQs > 0 ? (myScore / totalQs) * 100 : 0.0;
+      final bool isPassed = percentage >= 50;
+
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            onPressed: () => Get.back(),
+          ),
+          title: Text(
+            "${widget.language} • ${widget.stage.toUpperCase()}",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         body: Center(
           child: Padding(
@@ -240,70 +324,88 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: Colors.greenAccent.withOpacity(0.1),
+                    color: isPassed
+                        ? Colors.greenAccent.withOpacity(0.12)
+                        : Colors.orangeAccent.withOpacity(0.12),
                     shape: BoxShape.circle,
-                  ),
-                  child: Image.asset(
-                    "assets/images/tick1.png",
-                    height: 90,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.check_circle,
-                      color: Colors.greenAccent,
-                      size: 80,
+                    border: Border.all(
+                      color: isPassed
+                          ? Colors.greenAccent.withOpacity(0.3)
+                          : Colors.orangeAccent.withOpacity(0.3),
                     ),
                   ),
+                  child: Icon(
+                    isPassed
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.assignment_turned_in_rounded,
+                    color:
+                        isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                    size: 64,
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Text(
-                  "Test Already Submitted",
+                  "Assessment Completed",
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
-                  "You have already completed this test assessment.",
+                  "You have already submitted your evaluation for this stage.",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    color: Colors.white54,
+                    color: Colors.white60,
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 28),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
                   ),
                   child: Column(
                     children: [
                       Text(
-                        "Achieved Score",
+                        "Score Achieved",
                         style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         "$myScore / $totalQs",
                         style: GoogleFonts.poppins(
-                          color: Colors.greenAccent,
-                          fontSize: 42,
+                          color: isPassed
+                              ? Colors.greenAccent
+                              : Colors.orangeAccent,
+                          fontSize: 38,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "${percentage.toStringAsFixed(0)}% Marks",
+                        style: TextStyle(
+                          color: isPassed
+                              ? Colors.greenAccent
+                              : Colors.orangeAccent,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 35),
+                const SizedBox(height: 28),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -313,11 +415,11 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                       backgroundColor: accentPurple,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: Text(
-                      "Back to Dashboard",
+                      "Back to Assessments",
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 15,
@@ -333,14 +435,21 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       );
     }
 
-    // --- VIEW 2: NOT SCHEDULED ---
+    // --- VIEW 2: NO TEST SCHEDULED ---
     if (!isTestActive) {
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            onPressed: () => Get.back(),
+          ),
         ),
         body: Center(
           child: Padding(
@@ -362,7 +471,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Test Scheduled Soon",
+                  "Test Not Available",
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 20,
@@ -371,7 +480,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "There is no active test available for ${widget.language} (${widget.stage}) right now.",
+                  "There is currently no active test published for ${widget.language} (${widget.stage.toUpperCase()}). Please check back soon.",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     color: Colors.white54,
@@ -385,7 +494,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       );
     }
 
-    // --- VIEW 3: TAKING TEST (Enhanced Modern UI) ---
+    // --- VIEW 3: LIVE TEST TAKING ---
     final double progress = questions.isNotEmpty
         ? (userAnswers.length / questions.length)
         : 0.0;
@@ -470,14 +579,12 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       ),
       body: Column(
         children: [
-          // Progress bar tracker indicator
           LinearProgressIndicator(
             value: progress,
             backgroundColor: const Color(0xff1E1E2C),
             valueColor: AlwaysStoppedAnimation<Color>(accentPurple),
             minHeight: 4,
           ),
-
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(20),
@@ -499,13 +606,6 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                           ? accentPurple.withOpacity(0.4)
                           : Colors.white.withOpacity(0.05),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,7 +668,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? accentPurple.withOpacity(0.2)
+                                  ? accentPurple.withOpacity(0.18)
                                   : const Color(0xff12121A),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
@@ -615,7 +715,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                                           : Colors.white70,
                                       fontSize: 13,
                                       fontWeight: isSelected
-                                          ? FontWeight.w500
+                                          ? FontWeight.w600
                                           : FontWeight.normal,
                                     ),
                                   ),

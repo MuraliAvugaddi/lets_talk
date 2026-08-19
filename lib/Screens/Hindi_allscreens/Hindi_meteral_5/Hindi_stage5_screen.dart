@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:lets_talk/Screens/widgets/StageAttendanceWidget.dart';
 
 class HindiStage5Screen extends StatelessWidget {
   const HindiStage5Screen({super.key});
 
   @override
   Widget build(BuildContext context) {
-     return Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xff0A0A0E),
       appBar: AppBar(
         backgroundColor: const Color(0xff7F56D9),
-        title: Text("Hindi materal5"),
+        title: const Text("Hindi Material 5"),
+      ),
+      body: Column(
+        children: const [
+          StageAttendanceWidget(stageName: "Stage 5"),
+          Expanded(child: Center(child: Text("Hindi Stage 5 Content...", style: TextStyle(color: Colors.white)))),
+        ],
       ),
     );
   }

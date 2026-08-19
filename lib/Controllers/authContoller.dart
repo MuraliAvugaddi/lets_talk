@@ -92,7 +92,7 @@ class AuthController extends GetxController {
       socket!.emit('join_user_room', userId.toString());
     });
 
-    // ⚡ LIVE PERMISSION UPDATE FROM ADMIN
+    // ⚡ LIVE PERMISSION & MODE UPDATE FROM ADMIN
     socket!.on('permissions_updated', (data) {
       if (data is Map) {
         var current = Map<String, dynamic>.from(userData.value);
@@ -102,18 +102,21 @@ class AuthController extends GetxController {
         if (data.containsKey('hindiAccess')) {
           current['hindiAccess'] = data['hindiAccess'];
         }
+        if (data.containsKey('mode')) {
+          current['mode'] = data['mode']; // ⚡ Live updates Online/Offline mode
+        }
 
         // Force reactive update across all screens immediately
         userData.value = current;
-        userData.refresh(); // <--- CRITICAL FOR INSTANT UI REFRESH
+        userData.refresh();
         box.write('user', current);
 
         Get.snackbar(
-          "Access Updated",
-          "Permissions updated live!",
+          "Profile Updated",
+          "Your access permissions & mode have been updated live!",
           backgroundColor: const Color(0xff7F56D9),
           colorText: Colors.white,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
           snackPosition: SnackPosition.BOTTOM,
         );
       }

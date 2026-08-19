@@ -6,19 +6,16 @@ class EnglishStage1Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-     return Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xff0A0A0E),
       appBar: AppBar(
         backgroundColor: const Color(0xff7F56D9),
         title: const Text("English Material 1"),
       ),
       body: Column(
-        children: [
-          // This adds the attendance logic specifically for Stage 1
-          const StageAttendanceWidget(stageName: "Stage 1"),
-          
-          const Expanded(
-            child: Center(child: Text("Learn Material for Stage 1...")),
-          ),
+        children: const [
+          StageAttendanceWidget(stageName: "Stage 1"),
+          Expanded(child: Center(child: Text("English Stage 1 Content...", style: TextStyle(color: Colors.white)))),
         ],
       ),
     );
