@@ -29,10 +29,12 @@ class AccountScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthController controller = Get.find<AuthController>();
 
-    const Color backgroundColor = Color(0xff0A0A0E);
-    const Color cardColor = Color(0xff14141E);
-    const Color accentPurple = Color(0xff7F56D9);
-    const Color accentBlue = Color(0xff158DFE);
+    // --- BRAND PALETTE ---
+    final Color deepOceanBlue = const Color(0xff065381);
+    final Color tealMist = const Color(0xff508F97);
+    final Color goldenYellow = const Color(0xffF2C94C);
+    final Color darkCard = const Color(0xff14141E);
+    final Color backgroundColor = const Color(0xff0A0A0E);
     const Color accentGreen = Color(0xff25D366);
 
     return Scaffold(
@@ -52,8 +54,8 @@ class AccountScreen extends StatelessWidget {
         ),
       ),
       body: RefreshIndicator(
-        color: accentPurple,
-        backgroundColor: cardColor,
+        color: tealMist,
+        backgroundColor: darkCard,
         onRefresh: () async => await controller.refreshProfile(),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
@@ -68,9 +70,9 @@ class AccountScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: cardColor,
+                  color: darkCard,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: tealMist.withOpacity(0.35)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.4),
@@ -91,7 +93,7 @@ class AccountScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: accentPurple.withOpacity(0.35),
+                                color: tealMist.withOpacity(0.3),
                                 blurRadius: 24,
                                 spreadRadius: 2,
                               ),
@@ -103,8 +105,8 @@ class AccountScreen extends StatelessWidget {
                           height: 80,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: accentPurple, width: 2),
-                            color: const Color(0xff1E1E2C),
+                            border: Border.all(color: goldenYellow, width: 2),
+                            color: deepOceanBlue.withOpacity(0.2),
                           ),
                           child: ClipOval(
                             child: Image.asset(
@@ -120,7 +122,7 @@ class AccountScreen extends StatelessWidget {
                                           ? name[0].toUpperCase()
                                           : 'U',
                                       style: GoogleFonts.poppins(
-                                        color: accentPurple,
+                                        color: goldenYellow,
                                         fontSize: 30,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -170,13 +172,13 @@ class AccountScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isOnline
-                              ? Colors.blueAccent.withOpacity(0.15)
-                              : Colors.orangeAccent.withOpacity(0.15),
+                              ? tealMist.withOpacity(0.18)
+                              : goldenYellow.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isOnline
-                                ? Colors.blueAccent.withOpacity(0.4)
-                                : Colors.orangeAccent.withOpacity(0.4),
+                                ? tealMist.withOpacity(0.5)
+                                : goldenYellow.withOpacity(0.5),
                           ),
                         ),
                         child: Row(
@@ -187,17 +189,13 @@ class AccountScreen extends StatelessWidget {
                                   ? Icons.wifi_rounded
                                   : Icons.location_on_rounded,
                               size: 13,
-                              color: isOnline
-                                  ? Colors.blueAccent
-                                  : Colors.orangeAccent,
+                              color: isOnline ? tealMist : goldenYellow,
                             ),
                             const SizedBox(width: 5),
                             Text(
                               "${mode.toUpperCase()} STUDENT",
                               style: GoogleFonts.poppins(
-                                color: isOnline
-                                    ? Colors.blueAccent
-                                    : Colors.orangeAccent,
+                                color: isOnline ? tealMist : goldenYellow,
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.8,
@@ -220,21 +218,21 @@ class AccountScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: cardColor,
+                    color: darkCard,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentPurple.withOpacity(0.35)),
+                    border: Border.all(color: tealMist.withOpacity(0.35)),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: accentPurple.withOpacity(0.15),
+                          color: tealMist.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.fact_check_rounded,
-                          color: accentPurple,
+                          color: tealMist,
                           size: 24,
                         ),
                       ),
@@ -262,9 +260,9 @@ class AccountScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: accentPurple,
+                        color: tealMist,
                         size: 16,
                       ),
                     ],
@@ -281,21 +279,21 @@ class AccountScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: cardColor,
+                    color: darkCard,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: accentBlue.withOpacity(0.35)),
+                    border: Border.all(color: deepOceanBlue.withOpacity(0.5)),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: accentBlue.withOpacity(0.15),
+                          color: deepOceanBlue.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.leaderboard_rounded,
-                          color: accentBlue,
+                          color: goldenYellow,
                           size: 24,
                         ),
                       ),
@@ -323,9 +321,9 @@ class AccountScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: accentBlue,
+                        color: goldenYellow,
                         size: 16,
                       ),
                     ],

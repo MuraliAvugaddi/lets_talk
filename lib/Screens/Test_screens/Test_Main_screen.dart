@@ -32,6 +32,14 @@ class _TestScreenState extends State<TestScreen> {
   final AuthController authController = Get.find<AuthController>();
   final RxInt selectedTab = 0.obs; // 0 = English, 1 = Hindi
 
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color backgroundColor = const Color(0xff0A0A0E);
+  final Color headerColor = const Color(0xff14141E);
+  final Color cardColor = const Color(0xff14141E);
+
   @override
   void initState() {
     super.initState();
@@ -40,41 +48,78 @@ class _TestScreenState extends State<TestScreen> {
     });
   }
 
+  // UPDATED DIALOG (Matches Learn Screen exactly to fix UI issues)
   void _showAccessDeniedDialog(String testName) {
-    Get.defaultDialog(
-      title: "Access Restricted",
-      titlePadding: const EdgeInsets.only(top: 24, bottom: 8),
-      titleStyle: GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-      middleText: "Admin approval required to access $testName.",
-      middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-      backgroundColor: const Color(0xff181824),
-      radius: 18,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      confirm: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        width: 120,
-        height: 44,
-        child: ElevatedButton(
-          onPressed: () => Get.back(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff7F56D9),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(
-            "Understood",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
+    Get.dialog(
+      Dialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: tealMist.withOpacity(0.3), width: 1.2),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_person_rounded,
+                  color: Colors.amber,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                "Access Restricted",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Admin approval required to access $testName.",
+                style: GoogleFonts.poppins(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: deepOceanBlue,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Understood",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -95,12 +140,6 @@ class _TestScreenState extends State<TestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color backgroundColor = Color(0xff0A0A0E);
-    const Color headerColor = Color(0xff14141E);
-    const Color cardColor = Color(0xff14141E);
-    const Color accentPurple = Color(0xff7F56D9);
-    const Color accentBlue = Color(0xff158DFE);
-
     final List<Map<String, dynamic>> englishStages = [
       {"stage": 1, "key": "stage1", "dest": const EnglishTestStage1Screen()},
       {"stage": 2, "key": "stage2", "dest": const EnglishTestStage2Screen()},
@@ -188,9 +227,15 @@ class _TestScreenState extends State<TestScreen> {
                               curve: Curves.easeInOut,
                               decoration: BoxDecoration(
                                 color: selectedTab.value == 0
-                                    ? accentPurple
+                                    ? deepOceanBlue
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
+                                border: selectedTab.value == 0
+                                    ? Border.all(
+                                        color: goldenYellow.withOpacity(0.6),
+                                        width: 1,
+                                      )
+                                    : null,
                               ),
                               alignment: Alignment.center,
                               child: Row(
@@ -200,7 +245,7 @@ class _TestScreenState extends State<TestScreen> {
                                     Icons.language_rounded,
                                     size: 16,
                                     color: selectedTab.value == 0
-                                        ? Colors.white
+                                        ? goldenYellow
                                         : Colors.white60,
                                   ),
                                   const SizedBox(width: 8),
@@ -208,8 +253,8 @@ class _TestScreenState extends State<TestScreen> {
                                     "English Tests",
                                     style: GoogleFonts.poppins(
                                       color: selectedTab.value == 0
-                                        ? Colors.white
-                                        : Colors.white60,
+                                          ? Colors.white
+                                          : Colors.white60,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
                                     ),
@@ -227,9 +272,15 @@ class _TestScreenState extends State<TestScreen> {
                               curve: Curves.easeInOut,
                               decoration: BoxDecoration(
                                 color: selectedTab.value == 1
-                                    ? accentBlue
+                                    ? tealMist
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
+                                border: selectedTab.value == 1
+                                    ? Border.all(
+                                        color: goldenYellow.withOpacity(0.6),
+                                        width: 1,
+                                      )
+                                    : null,
                               ),
                               alignment: Alignment.center,
                               child: Row(
@@ -239,7 +290,7 @@ class _TestScreenState extends State<TestScreen> {
                                     Icons.translate_rounded,
                                     size: 16,
                                     color: selectedTab.value == 1
-                                        ? Colors.white
+                                        ? goldenYellow
                                         : Colors.white60,
                                   ),
                                   const SizedBox(width: 8),
@@ -247,8 +298,8 @@ class _TestScreenState extends State<TestScreen> {
                                     "Hindi Tests",
                                     style: GoogleFonts.poppins(
                                       color: selectedTab.value == 1
-                                        ? Colors.white
-                                        : Colors.white60,
+                                          ? Colors.white
+                                          : Colors.white60,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
                                     ),
@@ -269,7 +320,7 @@ class _TestScreenState extends State<TestScreen> {
           // --- BODY WITH REFRESH INDICATOR ---
           Expanded(
             child: RefreshIndicator(
-              color: accentPurple,
+              color: goldenYellow,
               backgroundColor: cardColor,
               onRefresh: () async => await authController.refreshProfile(),
               child: SingleChildScrollView(
@@ -282,10 +333,8 @@ class _TestScreenState extends State<TestScreen> {
                 ),
                 child: Obx(() {
                   final isEnglish = selectedTab.value == 0;
-                  final currentList =
-                      isEnglish ? englishStages : hindiStages;
-                  final activeAccent =
-                      isEnglish ? accentPurple : accentBlue;
+                  final currentList = isEnglish ? englishStages : hindiStages;
+                  final activeAccent = isEnglish ? deepOceanBlue : tealMist;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +355,7 @@ class _TestScreenState extends State<TestScreen> {
                           Text(
                             "${currentList.length} Stages",
                             style: GoogleFonts.poppins(
-                              color: activeAccent,
+                              color: goldenYellow,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -320,8 +369,7 @@ class _TestScreenState extends State<TestScreen> {
                         physics: const NeverScrollableScrollPhysics(),
                         padding: EdgeInsets.zero,
                         itemCount: currentList.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final item = currentList[index];
                           final int stageNum = item["stage"];
@@ -378,7 +426,7 @@ class _TestScreenState extends State<TestScreen> {
           border: Border.all(
             color: isLocked
                 ? Colors.white.withOpacity(0.05)
-                : accentColor.withOpacity(0.35),
+                : tealMist.withOpacity(0.35),
           ),
           boxShadow: [
             BoxShadow(
@@ -396,19 +444,19 @@ class _TestScreenState extends State<TestScreen> {
               decoration: BoxDecoration(
                 color: isLocked
                     ? Colors.white.withOpacity(0.04)
-                    : accentColor.withOpacity(0.15),
+                    : accentColor.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isLocked
                       ? Colors.white.withOpacity(0.08)
-                      : accentColor.withOpacity(0.4),
+                      : accentColor.withOpacity(0.5),
                 ),
               ),
               child: Center(
                 child: Text(
                   "0$stageNumber",
                   style: GoogleFonts.poppins(
-                    color: isLocked ? Colors.white38 : accentColor,
+                    color: isLocked ? Colors.white38 : goldenYellow,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
@@ -446,12 +494,12 @@ class _TestScreenState extends State<TestScreen> {
               decoration: BoxDecoration(
                 color: isLocked
                     ? const Color(0xff2A1C1C)
-                    : accentColor.withOpacity(0.12),
+                    : accentColor.withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isLocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
-                color: isLocked ? Colors.amber : accentColor,
+                color: isLocked ? goldenYellow : goldenYellow,
                 size: 18,
               ),
             ),

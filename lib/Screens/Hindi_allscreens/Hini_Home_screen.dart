@@ -38,6 +38,14 @@ class HindiMainScreen extends StatefulWidget {
 class _HindiMainScreenState extends State<HindiMainScreen> {
   final AuthController authController = Get.find<AuthController>();
 
+  // --- BRAND PALETTE ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color backgroundColor = const Color(0xff0A0A0E);
+  final Color headerColor = const Color(0xff14141E);
+  final Color cardColor = const Color(0xff14141E);
+
   @override
   void initState() {
     super.initState();
@@ -47,39 +55,76 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
   }
 
   void showAccessDeniedDialog(String title) {
-    Get.defaultDialog(
-      title: "Access Restricted",
-      titlePadding: const EdgeInsets.only(top: 24, bottom: 8),
-      titleStyle: GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-      middleText: "Please contact Admin to unlock $title",
-      middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-      backgroundColor: const Color(0xff14141E),
-      radius: 18,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      confirm: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        width: 120,
-        height: 44,
-        child: ElevatedButton(
-          onPressed: () => Get.back(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff158DFE),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(
-            "Understood",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
+    Get.dialog(
+      Dialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: tealMist.withOpacity(0.3), width: 1.2),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_person_rounded,
+                  color: Colors.amber,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                "Access Restricted",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Please contact your institute admin to unlock $title.",
+                style: GoogleFonts.poppins(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: deepOceanBlue,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Understood",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -94,12 +139,6 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color backgroundColor = Color(0xff0A0A0E);
-    const Color headerColor = Color(0xff14141E);
-    const Color cardColor = Color(0xff14141E);
-    const Color accentBlue = Color(0xff158DFE);
-    const Color accentPurple = Color(0xff7F56D9);
-
     final List<Map<String, dynamic>> stagesData = [
       {
         "title": "Stage 1",
@@ -232,7 +271,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
       backgroundColor: backgroundColor,
       body: Column(
         children: [
-          // Header without refresh icon
+          // Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(
@@ -256,9 +295,9 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   height: 46,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: accentBlue.withOpacity(0.18),
+                    color: tealMist.withOpacity(0.18),
                     border: Border.all(
-                      color: accentBlue.withOpacity(0.4),
+                      color: tealMist.withOpacity(0.4),
                       width: 1.5,
                     ),
                   ),
@@ -266,10 +305,10 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                     child: Text(
                       (authController.userData['name'] ?? 'L').isNotEmpty
                           ? (authController.userData['name'] ?? 'L')[0]
-                                .toUpperCase()
+                              .toUpperCase()
                           : 'L',
                       style: GoogleFonts.poppins(
-                        color: accentBlue,
+                        color: goldenYellow,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -307,7 +346,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
           // Body with Pull to Refresh
           Expanded(
             child: RefreshIndicator(
-              color: accentBlue,
+              color: goldenYellow,
               backgroundColor: cardColor,
               onRefresh: () async => await authController.refreshProfile(),
               child: SingleChildScrollView(
@@ -337,7 +376,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                           Text(
                             "${stagesData.length} Stages",
                             style: GoogleFonts.poppins(
-                              color: accentBlue,
+                              color: goldenYellow,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -354,11 +393,11 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                         itemCount: stagesData.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 1.15,
-                            ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.15,
+                        ),
                         itemBuilder: (context, index) {
                           final stage = stagesData[index];
                           final bool isLocked = _isLocked(
@@ -372,7 +411,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                             destination: stage["destination"],
                             isLocked: isLocked,
                             cardColor: cardColor,
-                            accentColor: accentBlue,
+                            accentColor: deepOceanBlue,
                           );
                         },
                       ),
@@ -387,7 +426,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                           color: cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.06),
+                            color: tealMist.withOpacity(0.3),
                           ),
                         ),
                         child: Column(
@@ -398,12 +437,12 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: accentBlue.withOpacity(0.15),
+                                    color: deepOceanBlue.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.live_tv_rounded,
-                                    color: accentBlue,
+                                    color: goldenYellow,
                                     size: 18,
                                   ),
                                 ),
@@ -429,7 +468,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                                   return _buildClassAvatar(
                                     context,
                                     item["label"],
-                                    accentBlue,
+                                    deepOceanBlue,
                                     item["dest"],
                                     isLocked: _isLocked('stage$index'),
                                   );
@@ -446,12 +485,12 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: accentPurple.withOpacity(0.15),
+                                    color: tealMist.withOpacity(0.18),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.groups_rounded,
-                                    color: accentPurple,
+                                    color: goldenYellow,
                                     size: 18,
                                   ),
                                 ),
@@ -472,13 +511,14 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                               physics: const BouncingScrollPhysics(),
                               child: Row(
                                 children: clubData.map((item) {
-                                  final int index = clubData.indexOf(item) + 1;
+                                  final int index =
+                                      clubData.indexOf(item) + 1;
                                   return _buildClubButton(
                                     context,
                                     item["label"],
                                     item["dest"],
                                     isLocked: _isLocked('stage$index'),
-                                    accentColor: accentBlue,
+                                    accentColor: tealMist,
                                   );
                                 }).toList(),
                               ),
@@ -529,7 +569,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
           border: Border.all(
             color: isLocked
                 ? Colors.white.withOpacity(0.05)
-                : accentColor.withOpacity(0.35),
+                : tealMist.withOpacity(0.4),
             width: isLocked ? 1 : 1.2,
           ),
           boxShadow: [
@@ -553,19 +593,19 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   decoration: BoxDecoration(
                     color: isLocked
                         ? Colors.white.withOpacity(0.05)
-                        : accentColor.withOpacity(0.15),
+                        : accentColor.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isLocked
                           ? Colors.white.withOpacity(0.08)
-                          : accentColor.withOpacity(0.35),
+                          : tealMist.withOpacity(0.45),
                     ),
                   ),
                   child: Center(
                     child: Text(
                       "0$stageNum",
                       style: GoogleFonts.poppins(
-                        color: isLocked ? Colors.white38 : accentColor,
+                        color: isLocked ? Colors.white38 : goldenYellow,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -577,12 +617,12 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   decoration: BoxDecoration(
                     color: isLocked
                         ? const Color(0xff2A1C1C)
-                        : accentColor.withOpacity(0.12),
+                        : tealMist.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     isLocked ? Icons.lock_rounded : Icons.arrow_forward_rounded,
-                    color: isLocked ? Colors.amber : accentColor,
+                    color: isLocked ? Colors.amber : goldenYellow,
                     size: 14,
                   ),
                 ),
@@ -647,17 +687,17 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isLocked ? Colors.white12 : color.withOpacity(0.6),
+                      color: isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
                       width: 1.5,
                     ),
                     color: isLocked
                         ? const Color(0xff0D0D14)
-                        : color.withOpacity(0.15),
+                        : color.withOpacity(0.2),
                   ),
                   child: Center(
                     child: Icon(
                       Icons.videocam_rounded,
-                      color: isLocked ? Colors.white24 : color,
+                      color: isLocked ? Colors.white24 : goldenYellow,
                       size: 22,
                     ),
                   ),
@@ -723,7 +763,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
           border: Border.all(
             color: isLocked ? Colors.white10 : accentColor.withOpacity(0.4),
           ),
-          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.1),
+          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.12),
         ),
         child: Row(
           children: [

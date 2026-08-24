@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:lets_talk/Screens/auth/otp_verification_screen.dart';
@@ -39,8 +40,6 @@ class AuthController extends GetxController {
   var currentOtpFlow = OtpFlowType.registration.obs;
   String selectedMode = "online";
 
-  final String baseUrl = "http://192.168.1.4:5000/api";
-  final String socketUrl = "http://192.168.1.4:5000";
   var userData = {}.obs;
 
   @override
@@ -79,7 +78,7 @@ class AuthController extends GetxController {
     socket?.disconnect();
 
     socket = IO.io(
-      socketUrl,
+      ApiEndpoints.socketUrl,
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -103,7 +102,7 @@ class AuthController extends GetxController {
           current['hindiAccess'] = data['hindiAccess'];
         }
         if (data.containsKey('mode')) {
-          current['mode'] = data['mode']; // ⚡ Live updates Online/Offline mode
+          current['mode'] = data['mode'];
         }
 
         // Force reactive update across all screens immediately
@@ -291,7 +290,7 @@ class AuthController extends GetxController {
     isLoading.value = true;
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/register"),
+        Uri.parse(ApiEndpoints.register),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "name": nameController.text.trim(),
@@ -352,7 +351,7 @@ class AuthController extends GetxController {
     isLoading.value = true;
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/login"),
+        Uri.parse(ApiEndpoints.login),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "phone": loginPhoneController.text.trim(),
@@ -438,7 +437,7 @@ class AuthController extends GetxController {
     isLoading.value = true;
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/reset-password"),
+        Uri.parse(ApiEndpoints.resetPassword),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "phone": forgotPhoneController.text.trim(),
@@ -485,7 +484,7 @@ class AuthController extends GetxController {
 
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/profile"),
+        Uri.parse(ApiEndpoints.profile),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -501,7 +500,7 @@ class AuthController extends GetxController {
         handleApiResponse(response);
       }
     } catch (e) {
-      print("Background refresh failed: $e");
+      debugPrint("Background refresh failed: $e");
     }
   }
 

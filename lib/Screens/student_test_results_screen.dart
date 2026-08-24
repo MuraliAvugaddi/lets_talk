@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
 class StudentTestResultsScreen extends StatefulWidget {
   const StudentTestResultsScreen({super.key});
@@ -21,12 +22,12 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
   bool isLoading = false;
   List<dynamic> resultsList = [];
 
-  final String baseUrl = "http://192.168.1.4:5000/api/test";
-
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
   final Color backgroundColor = const Color(0xff0A0A0E);
   final Color cardColor = const Color(0xff14141E);
-  final Color accentPurple = const Color(0xff7F56D9);
-  final Color accentBlue = const Color(0xff158DFE);
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/user/my-results?userId=$userId&language=$lang"),
+        Uri.parse("${ApiEndpoints.myResults}?userId=$userId&language=$lang"),
       );
 
       if (response.statusCode == 200) {
@@ -66,10 +67,10 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
 
   // Summary Metrics
   int get passedCount => resultsList.where((r) {
-        final score = r['score'] ?? 0;
-        final total = r['totalQuestions'] ?? 1;
-        return (score / total) >= 0.5;
-      }).length;
+    final score = r['score'] ?? 0;
+    final total = r['totalQuestions'] ?? 1;
+    return (score / total) >= 0.5;
+  }).length;
 
   double get averageScore {
     if (resultsList.isEmpty) return 0.0;
@@ -84,8 +85,6 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color activeAccent = selectedTab == 0 ? accentPurple : accentBlue;
-
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -107,6 +106,13 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
             fontSize: 17,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            onPressed: fetchResults,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
@@ -120,11 +126,15 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: _buildTabButton(0, "English Assessments", accentPurple),
+                  child: _buildTabButton(
+                    0,
+                    "English Assessments",
+                    deepOceanBlue,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _buildTabButton(1, "Hindi Assessments", accentBlue),
+                  child: _buildTabButton(1, "Hindi Assessments", tealMist),
                 ),
               ],
             ),
@@ -145,15 +155,15 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
                 _buildStatPill(
                   "Passed (≥50%)",
                   "$passedCount",
-                  const Color(0xff12B76A),
-                  const Color(0xff12B76A).withOpacity(0.15),
+                  goldenYellow,
+                  goldenYellow.withOpacity(0.15),
                 ),
                 const SizedBox(width: 8),
                 _buildStatPill(
                   "Avg Score",
                   "${averageScore.toStringAsFixed(0)}%",
-                  activeAccent,
-                  activeAccent.withOpacity(0.15),
+                  tealMist,
+                  tealMist.withOpacity(0.15),
                 ),
               ],
             ),
@@ -162,46 +172,45 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
           // --- 3. RESULTS LIST ---
           Expanded(
             child: isLoading
-                ? Center(child: CircularProgressIndicator(color: activeAccent))
+                ? Center(child: CircularProgressIndicator(color: goldenYellow))
                 : resultsList.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.assignment_turned_in_outlined,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "No submitted test results yet for ${selectedTab == 0 ? 'English' : 'Hindi'}.",
-                              style: GoogleFonts.poppins(
-                                color: Colors.grey,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: 50,
+                          color: Colors.grey,
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: fetchResults,
-                        color: activeAccent,
-                        backgroundColor: cardColor,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                        const SizedBox(height: 12),
+                        Text(
+                          "No submitted test results yet for ${selectedTab == 0 ? 'English' : 'Hindi'}.",
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey,
+                            fontSize: 13,
                           ),
-                          itemCount: resultsList.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = resultsList[index];
-                            return _buildResultCard(item, activeAccent);
-                          },
                         ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: fetchResults,
+                    color: goldenYellow,
+                    backgroundColor: cardColor,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
+                      itemCount: resultsList.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final item = resultsList[index];
+                        return _buildResultCard(item);
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -223,7 +232,8 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
           color: isSelected ? color : const Color(0xff0A0A0E),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : Colors.white.withOpacity(0.08),
+            color: isSelected ? goldenYellow : tealMist.withOpacity(0.3),
+            width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Center(
@@ -241,14 +251,18 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
   }
 
   Widget _buildStatPill(
-      String label, String value, Color textColor, Color bgColor) {
+    String label,
+    String value,
+    Color textColor,
+    Color bgColor,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: textColor.withOpacity(0.2)),
+          border: Border.all(color: textColor.withOpacity(0.25)),
         ),
         child: Column(
           children: [
@@ -274,7 +288,7 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
     );
   }
 
-  Widget _buildResultCard(dynamic item, Color accentColor) {
+  Widget _buildResultCard(dynamic item) {
     final String stage = (item['stage'] ?? "stage1").toString().toUpperCase();
     final int score = item['score'] ?? 0;
     final int total = item['totalQuestions'] ?? 0;
@@ -289,15 +303,14 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
       } catch (_) {}
     }
 
-    final Color statusColor =
-        isPassed ? const Color(0xff12B76A) : const Color(0xffF04438);
+    final Color statusColor = isPassed ? goldenYellow : const Color(0xffF04438);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: tealMist.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -306,9 +319,9 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.12),
+              color: statusColor.withOpacity(0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: statusColor.withOpacity(0.35)),
+              border: Border.all(color: statusColor.withOpacity(0.4)),
             ),
             child: Center(
               child: Text(
@@ -362,11 +375,11 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
               ),
               const SizedBox(height: 4),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
                 ),
                 child: Text(
                   isPassed ? "PASSED" : "NEEDS PRACTICE",

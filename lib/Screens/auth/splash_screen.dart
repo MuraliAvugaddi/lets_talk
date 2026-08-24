@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:lets_talk/Screens/MainNavigationScreen.dart'; // Ensure this path is correct
+import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:lets_talk/Screens/auth/welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -18,6 +18,12 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   final box = GetStorage();
+
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color darkCanvas = const Color(0xff0A0A0E);
 
   @override
   void initState() {
@@ -59,60 +65,85 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff0D0D0D),
-      body: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // --- LOGO CONTAINER ---
-              Container(
-                height: 120,
-                width: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xff1E1E1E),
-                  border: Border.all(color: const Color(0xff158DFE), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xff158DFE).withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                // ⬇️ UPDATED IMAGE PATH HERE
-                child: Image.asset(
-                  "assets/images/logo4x.png",
-                  fit: BoxFit.contain,
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              Text(
-                "Let's Talk",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                "Master English & Hindi",
-                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
-              ),
-
-              const SizedBox(height: 50),
-
-              const CircularProgressIndicator(color: Color(0xff158DFE)),
+      backgroundColor: darkCanvas,
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              deepOceanBlue.withOpacity(0.35),
+              darkCanvas,
             ],
+          ),
+        ),
+        child: Center(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // --- LOGO CONTAINER WITH AMBIENT GLOW ---
+                Container(
+                  height: 130,
+                  width: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xff14141E),
+                    border: Border.all(color: goldenYellow, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: deepOceanBlue.withOpacity(0.5),
+                        blurRadius: 30,
+                        spreadRadius: 6,
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(22),
+                  child: Image.asset(
+                    "assets/images/logo4x.png",
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.school_rounded,
+                      size: 54,
+                      color: goldenYellow,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                Text(
+                  "Let's Talk",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  "Master English & Hindi",
+                  style: GoogleFonts.poppins(
+                    color: tealMist,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                CircularProgressIndicator(
+                  color: goldenYellow,
+                  strokeWidth: 3,
+                ),
+              ],
+            ),
           ),
         ),
       ),

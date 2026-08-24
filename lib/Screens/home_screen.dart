@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/connectivityController.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
 // --- SCREEN IMPORTS ---
 import 'package:lets_talk/Screens/English_club5/English_club_stage1_screen.dart';
@@ -31,9 +32,6 @@ import 'package:lets_talk/Screens/English_online_5/English_online_stage5_screen.
 import 'package:lets_talk/Screens/English_online_5/English_online_stage6_screen.dart';
 import 'package:lets_talk/Screens/English_online_5/English_online_stage7_screen.dart';
 
-// Placeholder screens for Stage 6 & 7
-
-
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
 
@@ -48,7 +46,13 @@ class _LearnScreenState extends State<LearnScreen> {
 
   String? adminMessage;
   bool isMessageVisible = true;
-  final String baseUrl = "http://192.168.1.4:5000/api";
+
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color cardColor = const Color(0xff14141E);
+  final Color backgroundColor = const Color(0xff0A0A0E);
 
   @override
   void initState() {
@@ -67,7 +71,7 @@ class _LearnScreenState extends State<LearnScreen> {
 
   Future<void> fetchAdminNotification() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl/user/notification"));
+      final response = await http.get(Uri.parse(ApiEndpoints.userNotification));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['hasNotification'] == true) {
@@ -85,39 +89,76 @@ class _LearnScreenState extends State<LearnScreen> {
   }
 
   void showAccessDeniedDialog(String title) {
-    Get.defaultDialog(
-      title: "Access Restricted",
-      titlePadding: const EdgeInsets.only(top: 24, bottom: 8),
-      titleStyle: GoogleFonts.poppins(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-      ),
-      middleText: "Please contact Admin to unlock $title",
-      middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-      backgroundColor: const Color(0xff14141E),
-      radius: 18,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      confirm: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        width: 120,
-        height: 44,
-        child: ElevatedButton(
-          onPressed: () => Get.back(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff7F56D9),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(
-            "Understood",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
+    Get.dialog(
+      Dialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: tealMist.withOpacity(0.3), width: 1.2),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_person_rounded,
+                  color: Colors.amber,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                "Access Restricted",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Please contact your institute admin to unlock $title.",
+                style: GoogleFonts.poppins(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Get.back(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: deepOceanBlue,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Understood",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -132,10 +173,7 @@ class _LearnScreenState extends State<LearnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color backgroundColor = Color(0xff0A0A0E);
     const Color headerColor = Color(0xff14141E);
-    const Color cardColor = Color(0xff14141E);
-    const Color accentPurple = Color(0xff7F56D9);
     const Color accentBlue = Color(0xff158DFE);
 
     return Scaffold(
@@ -191,65 +229,53 @@ class _LearnScreenState extends State<LearnScreen> {
                 border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: accentPurple.withOpacity(0.18),
-                          border: Border.all(
-                            color: accentPurple.withOpacity(0.4),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            (authController.userData['name'] ?? 'L').isNotEmpty
-                                ? (authController.userData['name'] ?? 'L')[0]
-                                      .toUpperCase()
-                                : 'L',
-                            style: GoogleFonts.poppins(
-                              color: accentPurple,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: tealMist.withOpacity(0.18),
+                      border: Border.all(
+                        color: tealMist.withOpacity(0.4),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (authController.userData['name'] ?? 'L').isNotEmpty
+                            ? (authController.userData['name'] ?? 'L')[0]
+                                .toUpperCase()
+                            : 'L',
+                        style: GoogleFonts.poppins(
+                          color: goldenYellow,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "English Curriculum",
-                            style: GoogleFonts.poppins(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            authController.userData['name'] ?? 'Learner',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "English Curriculum",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        authController.userData['name'] ?? 'Learner',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.refresh_rounded,
-                      color: Colors.white70,
-                    ),
-                    onPressed: _refreshAllData,
                   ),
                 ],
               ),
@@ -259,7 +285,7 @@ class _LearnScreenState extends State<LearnScreen> {
           // Scrollable Learning Area with Pull-to-Refresh
           Expanded(
             child: RefreshIndicator(
-              color: accentPurple,
+              color: goldenYellow,
               backgroundColor: cardColor,
               onRefresh: _refreshAllData,
               child: SingleChildScrollView(
@@ -487,7 +513,7 @@ class _LearnScreenState extends State<LearnScreen> {
                           Text(
                             "${stagesData.length} Stages",
                             style: GoogleFonts.poppins(
-                              color: accentPurple,
+                              color: goldenYellow,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -504,11 +530,11 @@ class _LearnScreenState extends State<LearnScreen> {
                         itemCount: stagesData.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 1.15,
-                            ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.15,
+                        ),
                         itemBuilder: (context, index) {
                           final stage = stagesData[index];
                           return _buildModernStageCard(
@@ -519,7 +545,7 @@ class _LearnScreenState extends State<LearnScreen> {
                             destination: stage["destination"],
                             isLocked: stage["isLocked"],
                             cardColor: cardColor,
-                            accentColor: accentPurple,
+                            accentColor: deepOceanBlue,
                           );
                         },
                       ),
@@ -534,7 +560,7 @@ class _LearnScreenState extends State<LearnScreen> {
                           color: cardColor,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.06),
+                            color: tealMist.withOpacity(0.3),
                           ),
                         ),
                         child: Column(
@@ -545,12 +571,12 @@ class _LearnScreenState extends State<LearnScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: accentBlue.withOpacity(0.15),
+                                    color: deepOceanBlue.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.live_tv_rounded,
-                                    color: accentBlue,
+                                    color: goldenYellow,
                                     size: 18,
                                   ),
                                 ),
@@ -574,7 +600,7 @@ class _LearnScreenState extends State<LearnScreen> {
                                   return _buildClassAvatar(
                                     context,
                                     item["label"],
-                                    accentBlue,
+                                    deepOceanBlue,
                                     item["dest"],
                                     isLocked: item["isLocked"],
                                   );
@@ -591,12 +617,12 @@ class _LearnScreenState extends State<LearnScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: accentPurple.withOpacity(0.15),
+                                    color: tealMist.withOpacity(0.18),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.groups_rounded,
-                                    color: accentPurple,
+                                    color: goldenYellow,
                                     size: 18,
                                   ),
                                 ),
@@ -622,7 +648,7 @@ class _LearnScreenState extends State<LearnScreen> {
                                     item["label"],
                                     item["dest"],
                                     isLocked: item["isLocked"],
-                                    accentColor: accentPurple,
+                                    accentColor: tealMist,
                                   );
                                 }).toList(),
                               ),
@@ -673,7 +699,7 @@ class _LearnScreenState extends State<LearnScreen> {
           border: Border.all(
             color: isLocked
                 ? Colors.white.withOpacity(0.05)
-                : accentColor.withOpacity(0.35),
+                : tealMist.withOpacity(0.4),
             width: isLocked ? 1 : 1.2,
           ),
           boxShadow: [
@@ -697,19 +723,19 @@ class _LearnScreenState extends State<LearnScreen> {
                   decoration: BoxDecoration(
                     color: isLocked
                         ? Colors.white.withOpacity(0.05)
-                        : accentColor.withOpacity(0.15),
+                        : accentColor.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isLocked
                           ? Colors.white.withOpacity(0.08)
-                          : accentColor.withOpacity(0.35),
+                          : tealMist.withOpacity(0.45),
                     ),
                   ),
                   child: Center(
                     child: Text(
                       "0$stageNum",
                       style: GoogleFonts.poppins(
-                        color: isLocked ? Colors.white38 : accentColor,
+                        color: isLocked ? Colors.white38 : goldenYellow,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -721,12 +747,12 @@ class _LearnScreenState extends State<LearnScreen> {
                   decoration: BoxDecoration(
                     color: isLocked
                         ? const Color(0xff2A1C1C)
-                        : accentColor.withOpacity(0.12),
+                        : tealMist.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     isLocked ? Icons.lock_rounded : Icons.arrow_forward_rounded,
-                    color: isLocked ? Colors.amber : accentColor,
+                    color: isLocked ? Colors.amber : goldenYellow,
                     size: 14,
                   ),
                 ),
@@ -791,17 +817,17 @@ class _LearnScreenState extends State<LearnScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isLocked ? Colors.white12 : color.withOpacity(0.6),
+                      color: isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
                       width: 1.5,
                     ),
                     color: isLocked
                         ? const Color(0xff0D0D14)
-                        : color.withOpacity(0.15),
+                        : color.withOpacity(0.2),
                   ),
                   child: Center(
                     child: Icon(
                       Icons.videocam_rounded,
-                      color: isLocked ? Colors.white24 : color,
+                      color: isLocked ? Colors.white24 : goldenYellow,
                       size: 22,
                     ),
                   ),
@@ -867,7 +893,7 @@ class _LearnScreenState extends State<LearnScreen> {
           border: Border.all(
             color: isLocked ? Colors.white10 : accentColor.withOpacity(0.4),
           ),
-          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.1),
+          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.12),
         ),
         child: Row(
           children: [

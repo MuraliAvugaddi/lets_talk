@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
 class StudentAttendanceScreen extends StatefulWidget {
   const StudentAttendanceScreen({super.key});
@@ -23,12 +24,12 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
   bool isLoading = false;
   List<dynamic> allRecords = [];
 
-  final String baseUrl = "http://192.168.1.4:5000/api";
-
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
   final Color backgroundColor = const Color(0xff0A0A0E);
   final Color cardColor = const Color(0xff14141E);
-  final Color accentPurple = const Color(0xff7F56D9);
-  final Color accentBlue = const Color(0xff158DFE);
 
   @override
   void initState() {
@@ -49,7 +50,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/user/my-attendance?userId=$userId&language=$lang"),
+        Uri.parse("${ApiEndpoints.myAttendance}?userId=$userId&language=$lang"),
       );
 
       if (response.statusCode == 200) {
@@ -159,7 +160,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                   children: [
                     Icon(
                       Icons.calendar_month_rounded,
-                      color: accentPurple,
+                      color: goldenYellow,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
@@ -216,15 +217,15 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                 _buildStatPill(
                   "Present",
                   "$presentCount",
-                  const Color(0xff12B76A),
-                  const Color(0xff12B76A).withOpacity(0.15),
+                  goldenYellow,
+                  goldenYellow.withOpacity(0.15),
                 ),
                 const SizedBox(width: 8),
                 _buildStatPill(
                   "Partial/Late",
                   "$partialCount",
-                  const Color(0xffF79009),
-                  const Color(0xffF79009).withOpacity(0.15),
+                  tealMist,
+                  tealMist.withOpacity(0.15),
                 ),
                 const SizedBox(width: 8),
                 _buildStatPill(
@@ -242,7 +243,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
           // Session Records List
           Expanded(
             child: isLoading
-                ? Center(child: CircularProgressIndicator(color: accentPurple))
+                ? Center(child: CircularProgressIndicator(color: goldenYellow))
                 : monthlyFilteredRecords.isEmpty
                 ? Center(
                     child: Column(
@@ -266,7 +267,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                   )
                 : RefreshIndicator(
                     onRefresh: fetchAttendance,
-                    color: accentPurple,
+                    color: goldenYellow,
                     backgroundColor: cardColor,
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(
@@ -290,8 +291,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
   Widget _buildCategoryPill(int index, String title) {
     final bool isSelected = selectedCategory == index;
     final Color activeColor = (index == 0 || index == 1)
-        ? accentPurple
-        : accentBlue;
+        ? deepOceanBlue
+        : tealMist;
 
     return GestureDetector(
       onTap: () {
@@ -305,7 +306,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
           color: isSelected ? activeColor : cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? activeColor : Colors.white.withOpacity(0.08),
+            color: isSelected ? goldenYellow : tealMist.withOpacity(0.3),
+            width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Center(
@@ -334,7 +336,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: textColor.withOpacity(0.2)),
+          border: Border.all(color: textColor.withOpacity(0.25)),
         ),
         child: Column(
           children: [
@@ -367,9 +369,9 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
     final int totalMins = item['totalMinutesSpent'] ?? 0;
     final String batchTime = item['batchTime'] ?? "N/A";
 
-    Color statusColor = const Color(0xff12B76A);
+    Color statusColor = goldenYellow;
     if (status == "Partial" || status == "Late") {
-      statusColor = const Color(0xffF79009);
+      statusColor = tealMist;
     }
     if (status == "Absent") {
       statusColor = const Color(0xffF04438);
@@ -380,7 +382,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: tealMist.withOpacity(0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -388,7 +390,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.12),
+              color: statusColor.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -437,9 +439,9 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
+                  color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                  border: Border.all(color: statusColor.withOpacity(0.4)),
                 ),
                 child: Text(
                   status,
@@ -455,7 +457,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                 Text(
                   "$totalMins mins",
                   style: GoogleFonts.poppins(
-                    color: Colors.greenAccent,
+                    color: goldenYellow,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),

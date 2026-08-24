@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
 class TestTakingScreen extends StatefulWidget {
   final String language; // "English" or "Hindi"
@@ -34,8 +35,14 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
   int timeLeftSeconds = 25 * 60;
   Timer? _timer;
 
-  final String baseUrl = "http://192.168.1.4:5000/api/test";
   final box = GetStorage();
+
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color backgroundColor = const Color(0xff0A0A0E);
+  final Color cardColor = const Color(0xff14141E);
 
   @override
   void initState() {
@@ -58,7 +65,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
     try {
       final response = await http.get(
         Uri.parse(
-          "$baseUrl/user/get-test?language=${widget.language}&stage=${widget.stage}&userId=$userId",
+          "${ApiEndpoints.getTest}?language=${widget.language}&stage=${widget.stage}&userId=$userId",
         ),
       );
 
@@ -107,17 +114,14 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       Get.snackbar(
         "Incomplete Test",
         "Please answer all questions before submitting.",
-        backgroundColor: const Color(0xff2A1C11),
-        colorText: Colors.orangeAccent,
-        borderColor: Colors.orangeAccent.withOpacity(0.5),
+        backgroundColor: cardColor,
+        colorText: goldenYellow,
+        borderColor: goldenYellow.withOpacity(0.5),
         borderWidth: 1,
         snackPosition: SnackPosition.BOTTOM,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
-        icon: const Icon(
-          Icons.warning_amber_rounded,
-          color: Colors.orangeAccent,
-        ),
+        icon: Icon(Icons.warning_amber_rounded, color: goldenYellow),
       );
       return;
     }
@@ -127,7 +131,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
       Get.snackbar(
         "Error",
         "User not logged in.",
-        backgroundColor: const Color(0xff2A1C24),
+        backgroundColor: cardColor,
         colorText: Colors.redAccent,
       );
       return;
@@ -142,7 +146,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/user/submit-test"),
+        Uri.parse(ApiEndpoints.submitTest),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": userData['id'] ?? userData['_id'],
@@ -181,7 +185,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
     Get.defaultDialog(
       title: "",
       titlePadding: EdgeInsets.zero,
-      backgroundColor: const Color(0xff14141E),
+      backgroundColor: cardColor,
       radius: 20,
       contentPadding: const EdgeInsets.all(20),
       content: Column(
@@ -190,13 +194,13 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isPassed
-                  ? Colors.greenAccent.withOpacity(0.15)
-                  : Colors.orangeAccent.withOpacity(0.15),
+                  ? goldenYellow.withOpacity(0.15)
+                  : Colors.redAccent.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isPassed ? Icons.emoji_events_rounded : Icons.replay_rounded,
-              color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+              color: isPassed ? goldenYellow : Colors.redAccent,
               size: 44,
             ),
           ),
@@ -220,9 +224,9 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xff0A0A0E),
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: tealMist.withOpacity(0.3)),
             ),
             child: Column(
               children: [
@@ -236,13 +240,13 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                   style: GoogleFonts.poppins(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                    color: isPassed ? goldenYellow : Colors.redAccent,
                   ),
                 ),
                 Text(
                   "${percentage.toStringAsFixed(0)}% Accuracy",
                   style: TextStyle(
-                    color: isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                    color: isPassed ? goldenYellow : Colors.redAccent,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -257,7 +261,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
             child: ElevatedButton(
               onPressed: () => Get.back(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xff7F56D9),
+                backgroundColor: deepOceanBlue,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -279,18 +283,14 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color backgroundColor = const Color(0xff0A0A0E);
-    final Color cardColor = const Color(0xff14141E);
-    final Color accentPurple = const Color(0xff7F56D9);
-
     if (isLoading) {
       return Scaffold(
         backgroundColor: backgroundColor,
-        body: Center(child: CircularProgressIndicator(color: accentPurple)),
+        body: Center(child: CircularProgressIndicator(color: goldenYellow)),
       );
     }
 
-    // --- VIEW 1: ALREADY TAKEN (Clean Modern Card) ---
+    // --- VIEW 1: ALREADY TAKEN ---
     if (isAlreadyTaken) {
       final double percentage = totalQs > 0 ? (myScore / totalQs) * 100 : 0.0;
       final bool isPassed = percentage >= 50;
@@ -327,21 +327,20 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
                     color: isPassed
-                        ? Colors.greenAccent.withOpacity(0.12)
-                        : Colors.orangeAccent.withOpacity(0.12),
+                        ? goldenYellow.withOpacity(0.12)
+                        : Colors.redAccent.withOpacity(0.12),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isPassed
-                          ? Colors.greenAccent.withOpacity(0.3)
-                          : Colors.orangeAccent.withOpacity(0.3),
+                          ? goldenYellow.withOpacity(0.35)
+                          : Colors.redAccent.withOpacity(0.35),
                     ),
                   ),
                   child: Icon(
                     isPassed
                         ? Icons.check_circle_outline_rounded
                         : Icons.assignment_turned_in_rounded,
-                    color:
-                        isPassed ? Colors.greenAccent : Colors.orangeAccent,
+                    color: isPassed ? goldenYellow : Colors.redAccent,
                     size: 64,
                   ),
                 ),
@@ -370,7 +369,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                   decoration: BoxDecoration(
                     color: cardColor,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    border: Border.all(color: tealMist.withOpacity(0.35)),
                   ),
                   child: Column(
                     children: [
@@ -385,9 +384,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                       Text(
                         "$myScore / $totalQs",
                         style: GoogleFonts.poppins(
-                          color: isPassed
-                              ? Colors.greenAccent
-                              : Colors.orangeAccent,
+                          color: isPassed ? goldenYellow : Colors.redAccent,
                           fontSize: 38,
                           fontWeight: FontWeight.bold,
                         ),
@@ -395,9 +392,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                       Text(
                         "${percentage.toStringAsFixed(0)}% Marks",
                         style: TextStyle(
-                          color: isPassed
-                              ? Colors.greenAccent
-                              : Colors.orangeAccent,
+                          color: isPassed ? goldenYellow : Colors.redAccent,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -412,7 +407,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                   child: ElevatedButton(
                     onPressed: () => Get.back(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: accentPurple,
+                      backgroundColor: deepOceanBlue,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -460,12 +455,12 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.1),
+                    color: goldenYellow.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.schedule_rounded,
-                    color: Colors.amber,
+                    color: goldenYellow,
                     size: 60,
                   ),
                 ),
@@ -554,7 +549,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
               child: ElevatedButton(
                 onPressed: () => submitTest(forceSubmit: false),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentPurple,
+                  backgroundColor: deepOceanBlue,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -567,7 +562,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                 child: Text(
                   "Submit",
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
+                    color: goldenYellow,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -582,7 +577,7 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
           LinearProgressIndicator(
             value: progress,
             backgroundColor: const Color(0xff1E1E2C),
-            valueColor: AlwaysStoppedAnimation<Color>(accentPurple),
+            valueColor: AlwaysStoppedAnimation<Color>(goldenYellow),
             minHeight: 4,
           ),
           Expanded(
@@ -603,8 +598,8 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: selectedOption != null
-                          ? accentPurple.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.05),
+                          ? goldenYellow.withOpacity(0.4)
+                          : tealMist.withOpacity(0.2),
                     ),
                   ),
                   child: Column(
@@ -619,13 +614,13 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: accentPurple.withOpacity(0.15),
+                              color: deepOceanBlue.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               "Q${index + 1}",
                               style: GoogleFonts.poppins(
-                                color: accentPurple,
+                                color: goldenYellow,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -668,12 +663,12 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? accentPurple.withOpacity(0.18)
+                                  ? deepOceanBlue.withOpacity(0.3)
                                   : const Color(0xff12121A),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isSelected
-                                    ? accentPurple
+                                    ? goldenYellow
                                     : Colors.white.withOpacity(0.06),
                                 width: isSelected ? 1.5 : 1,
                               ),
@@ -687,19 +682,19 @@ class _TestTakingScreenState extends State<TestTakingScreen> {
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: isSelected
-                                          ? accentPurple
+                                          ? goldenYellow
                                           : Colors.white38,
                                       width: 2,
                                     ),
                                     color: isSelected
-                                        ? accentPurple
+                                        ? goldenYellow
                                         : Colors.transparent,
                                   ),
                                   child: isSelected
                                       ? const Center(
                                           child: Icon(
                                             Icons.circle,
-                                            color: Colors.white,
+                                            color: Colors.black,
                                             size: 8,
                                           ),
                                         )

@@ -1,16 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:lets_talk/Controllers/authContoller.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
-// --- UPDATED INSTITUTE LOCATION (From Map Pin) ---
-const double instituteLat = 21.284764;
-const double instituteLng = 81.694271;
-const double allowedRadius = 150.0; // Allowed radius in meters
-const String baseUrl = "http://192.168.1.4:5000/api";
+// --- UPDATED INSTITUTE LOCATION (Visakhapatnam Rama Talkies Road) ---
+const double instituteLat = 17.729417;
+const double instituteLng = 83.312231;
+const double allowedRadius = 40.0; // Optimized radius: covers classroom & handles indoor GPS drift
 
 class StageAttendanceWidget extends StatefulWidget {
   final String stageName;
@@ -29,8 +29,11 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
   String? currentBatchSlot;
   String attendanceStatusText = "Not Marked";
 
-  final Color cardColor = const Color(0xff14141E);
-  final Color accentPurple = const Color(0xff7F56D9);
+  // --- BRAND COLORS ---
+  final Color deepOceanBlue = const Color(0xff065381);
+  final Color tealMist = const Color(0xff508F97);
+  final Color goldenYellow = const Color(0xffF2C94C);
+  final Color darkCard = const Color(0xff14141E);
 
   @override
   void initState() {
@@ -73,7 +76,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
 
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/user/my-attendance?userId=$userId"),
+        Uri.parse("${ApiEndpoints.myAttendance}?userId=$userId"),
       );
 
       if (response.statusCode == 200) {
@@ -101,26 +104,58 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
   Future<void> markAttendance() async {
     setState(() => isAttendanceLoading = true);
     try {
-      // 1. Check if location service is enabled on device
+      // 1. Check if Device GPS is turned ON
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        Get.snackbar(
-          "Location Disabled",
-          "Please enable GPS / Location on your phone to check in.",
-          backgroundColor: Colors.amber.shade900,
-          colorText: Colors.white,
+        Get.defaultDialog(
+          title: "Enable GPS",
+          titlePadding: const EdgeInsets.only(top: 20, bottom: 8),
+          titleStyle: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          middleText: "Your device GPS is turned off. Please turn it on to check in.",
+          middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+          backgroundColor: darkCard,
+          radius: 16,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          confirm: SizedBox(
+            height: 40,
+            child: ElevatedButton(
+              onPressed: () async {
+                Get.back();
+                await Geolocator.openLocationSettings();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: deepOceanBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                "Open Settings",
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          cancel: SizedBox(
+            height: 40,
+            child: TextButton(
+              onPressed: () => Get.back(),
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.white60)),
+            ),
+          ),
         );
         return;
       }
 
-      // 2. Permission handling
+      // 2. Check and Request App Permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           Get.snackbar(
             "Permission Denied",
-            "Location permission is required for classroom check-in.",
+            "Location permission is required to check in.",
             backgroundColor: Colors.redAccent,
             colorText: Colors.white,
           );
@@ -128,22 +163,56 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         }
       }
 
+      // 3. If User clicked "Don't ask again" / Denied Forever
       if (permission == LocationPermission.deniedForever) {
-        Get.snackbar(
-          "Permission Blocked",
-          "Please enable Location permission in app settings.",
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
+        Get.defaultDialog(
+          title: "Permission Required",
+          titlePadding: const EdgeInsets.only(top: 20, bottom: 8),
+          titleStyle: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          middleText:
+              "Location permission is permanently blocked. Please allow location in App Settings.",
+          middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+          backgroundColor: darkCard,
+          radius: 16,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          confirm: SizedBox(
+            height: 40,
+            child: ElevatedButton(
+              onPressed: () async {
+                Get.back();
+                await Geolocator.openAppSettings();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: deepOceanBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                "Open Settings",
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          cancel: SizedBox(
+            height: 40,
+            child: TextButton(
+              onPressed: () => Get.back(),
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.white60)),
+            ),
+          ),
         );
         return;
       }
 
-      // 3. Get accurate current GPS position
+      // 4. Get Current Position
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // 4. Calculate Distance from Institute
+      // 5. Calculate Distance
       double distance = Geolocator.distanceBetween(
         position.latitude,
         position.longitude,
@@ -162,10 +231,10 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         return;
       }
 
-      // 5. Submit Check-in to Backend
+      // 6. Submit Check-in
       final userData = authController.userData;
       final response = await http.post(
-        Uri.parse("$baseUrl/user/mark-attendance"),
+        Uri.parse(ApiEndpoints.markAttendance),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": userData['id'] ?? userData['_id'],
@@ -185,7 +254,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         Get.snackbar(
           "Checked In!",
           "Marked $attendanceStatusText for ${widget.stageName}",
-          backgroundColor: Colors.green,
+          backgroundColor: tealMist,
           colorText: Colors.white,
         );
       } else {
@@ -193,13 +262,17 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         Get.snackbar(
           "Notice",
           body['message'] ?? "Attendance already marked.",
-          backgroundColor: Colors.orangeAccent,
-          colorText: Colors.white,
+          backgroundColor: goldenYellow.withOpacity(0.9),
+          colorText: Colors.black,
         );
       }
     } catch (e) {
-      Get.snackbar("Error", "Check-in failed: $e",
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Check-in failed: $e",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     } finally {
       if (mounted) setState(() => isAttendanceLoading = false);
     }
@@ -207,7 +280,6 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // 🛑 Wrap with Obx to reactively hide/show if Admin toggles student between Online/Offline live
     return Obx(() {
       final String userMode = (authController.userData['mode'] ?? "online")
           .toString()
@@ -218,24 +290,20 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         return const SizedBox.shrink();
       }
 
-      // 1. If Marked Today: Green Confirmation Card
+      // 1. If Marked Today: Teal Mist Confirmation Card with Golden Highlights
       if (isMarkedToday) {
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.greenAccent.withOpacity(0.12),
+            color: tealMist.withOpacity(0.12),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.greenAccent.withOpacity(0.4)),
+            border: Border.all(color: tealMist.withOpacity(0.4)),
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.check_circle_rounded,
-                color: Colors.greenAccent,
-                size: 28,
-              ),
+              Icon(Icons.check_circle_rounded, color: goldenYellow, size: 28),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -244,7 +312,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                     Text(
                       attendanceStatusText,
                       style: GoogleFonts.poppins(
-                        color: Colors.greenAccent,
+                        color: goldenYellow,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -264,16 +332,16 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         );
       }
 
-      // 2. Active Batch Window: Show "I Am Here" GPS Check-In Button
+      // 2. Active Batch Window: Deep Ocean Blue & Teal Mist GPS Check-In Button
       if (currentBatchSlot != null) {
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cardColor,
+            color: darkCard,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: accentPurple.withOpacity(0.4)),
+            border: Border.all(color: tealMist.withOpacity(0.35)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,15 +366,19 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                 child: ElevatedButton.icon(
                   onPressed: isAttendanceLoading ? null : markAttendance,
                   icon: isAttendanceLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: goldenYellow,
                           ),
                         )
-                      : const Icon(Icons.location_on_rounded, size: 18),
+                      : Icon(
+                          Icons.location_on_rounded,
+                          size: 18,
+                          color: goldenYellow,
+                        ),
                   label: Text(
                     isAttendanceLoading
                         ? "Verifying GPS Location..."
@@ -318,7 +390,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentPurple,
+                    backgroundColor: deepOceanBlue,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -331,13 +403,13 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         );
       }
 
-      // 3. Fallback when outside standard 7 batch windows
+      // 3. Fallback when outside standard batch windows
       return Container(
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cardColor,
+          color: darkCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white10),
         ),

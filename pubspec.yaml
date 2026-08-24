@@ -52,6 +52,8 @@ dependencies:
   firebase_messaging: ^16.5.0
   pinput: ^6.0.2
   socket_io_client: ^3.1.6
+  flutter_pdfview: ^1.4.5
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -77,30 +79,130 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/images/stage1.png
-    - assets/images/stage2.png
-    - assets/images/stage3.png
-    - assets/images/stage4.png
-    - assets/images/stage5.png
-    - assets/images/hindi1.png
-    - assets/images/test image.png
-    - assets/images/tick1.png
     - assets/images/account1.png
-    - assets/images/test1image.png
-    - assets/images/logoin1x.png
     - assets/images/logo4x.png
     - assets/images/iconlogoforlets.png
-  #   - images/a_dot_ham.jpeg
-
-
+    - assets/images/satge1/Day-2_English_ST-1_(Past Be).pdf
+    - assets/images/satge1/Day-3_English_ST-1 (Past Be).pdf
+    - assets/images/satge1/Day-4_English_ST-1 (Pre Be).pdf
+    - assets/images/satge1/Day-5_English_ST-1 (Future Be).pdf
+    - assets/images/satge1/Day-6_ST-1_Eng (Articles & Practice On Be).pdf
+    - assets/images/satge1/Day-7_ST-1_Eng (There Form).pdf
+    - assets/images/satge1/Day-8_ST-1_Eng (Past Have).pdf
+    - assets/images/satge1/Day-9_ST-1_Eng (Present Have).pdf
+    - assets/images/satge1/Day-10_ST-1_Eng (Future Have).pdf
+    - assets/images/satge1/Day-11_ST-1_Eng (🔴Practice On Be, There & Have).pdf
+    - assets/images/satge1/Day-12_ST-1_Eng (Formation Of Action Verbs).pdf
+    - assets/images/satge1/Day-13_ST-1_Eng (Past Simple A.V).pdf
+    - assets/images/satge1/Day-14_ST-1_Eng (Present Simple A.V).pdf
+    - assets/images/satge1/Day-15_ST-1_Eng (Future Simple A.V).pdf
+    - assets/images/satge1/Day-16_ST-1_Eng (🔴Practice On Simple A.v).pdf
+    - assets/images/satge1/Day-17_ST-1_Eng (Past Simple Passive Voice).pdf
+    - assets/images/satge1/Day-18_ST-1_Eng (Present Simple P.V).pdf
+    - assets/images/satge1/Day-19_ST-1_Eng (Future Simple P.V).pdf
+    - assets/images/satge1/Day-20_ST-1_Eng (🔴Practice On Simple A.v & P.v).pdf
+    - assets/images/satge1/Day-21_ST-1_Eng (Past Continuous A.V & P.V).pdf
+    - assets/images/satge1/Day-22_ST-1_Eng (Present Continuous A.V & P.V).pdf
+    - assets/images/satge1/Day-22_ST-1_Eng (Present Continuous A.V & P.V).pdf
+    - assets/images/satge1/Day-23_ST-1_Eng (Future Continuous A.v).pdf
+    - assets/images/satge1/Day-23_ST-1_Eng (Future Continuous A.v).pdf
+    - assets/images/satge1/Day-24_ST-1_Eng (🔴Practice on Simple & Continuous A.v & P.v).pdf
+    - assets/images/satge1/Day-25_ST-1_Eng (Past Simple Make, Let & Get-Causative verbs).pdf
+    - assets/images/satge1/Day-26_ST-1_Eng (Present Simple M.L.G).pdf
+    - assets/images/satge1/Day-27_ST-1_Eng (Future Simple M.L.G).pdf
+    - assets/images/satge1/Day-28_ST-1_Eng (Past & Present Continuous M.L.G).pdf
+  #   - Stage2 materal
+    - assets/images/satge2/Day-2_ST-2_Eng (Order-1&2).pdf
+    - assets/images/satge2/Day-3_ST-2_Eng (Request-1&2).pdf
+    - assets/images/satge2/Day-4_ST-2_Eng (Permission 1&2).pdf
+    - assets/images/satge2/Day-5_ST-2_Eng (Suggestion 1&2).pdf
+    - assets/images/satge2/Day-6_ST-2_Eng (🔴Practice on Imperative sentences).pdf
+    - assets/images/satge2/Day-7_ST-2_Eng (Past habit-1).pdf
+    - assets/images/satge2/Day-8_ST-2_Eng (Past habit-2,3 & 4).pdf
+    - assets/images/satge2/Day-9_ST-2_Eng (Present habit-2,3 & 4).pdf
+    - assets/images/satge2/Day-10_ST-2_Eng (Future habit-2 & 4).pdf
+    - assets/images/satge2/Day-11_ST-2_Eng (Past permanent ability comparison with past simple).pdf
+    - assets/images/satge2/Day-12_ST-2_Eng (Past temporary ability comparison with past continuous).pdf
+    - assets/images/satge2/Day-13_ST-2_Eng (Present permanent ability comparison with present simple).pdf
+    - assets/images/satge2/Day-14_ST-2_Eng (Present temporary ability comparison with Present continuous).pdf
+    - assets/images/satge2/Day-15_ST-2_Eng (Future permanent & temporary ability comparison with future simple & continuous).pdf
+    - assets/images/satge2/Day-16_ST-2_Eng (🔴 Practice on Ability, Simple & Continuous).pdf
+    - assets/images/satge2/Day-17_ST-2_Eng (Past willingness-1).pdf
+    - assets/images/satge2/Day-18_ST-2_Eng (Past willingness-2).pdf
+    - assets/images/satge2/Day-19_ST-2_Eng (Present willingness-1).pdf
+    - assets/images/satge2/Day-20_ST-2_Eng (Present willingness-2).pdf
+    - assets/images/satge2/Day-21_ST-2_Eng (🔴Practice on Past & Present willingness-1&2).pdf
+    - assets/images/satge2/Day-22_ST-2_Eng (Past, Present & Future willingness-3).pdf
+    - assets/images/satge2/Day-23_ST-2_Eng (Past, Present & Future compulsion).pdf
+    - assets/images/satge2/Day-24_ST-2_Eng (Lower modals).pdf
+    - assets/images/satge2/Day-25_ST-2_Eng (Integration of lower modals).pdf
+    - assets/images/satge2/Day-26_ST-2_Eng (Integration of would [used to]).pdf
+    - assets/images/satge2/Day-27_ST-2_Eng (Gerund).pdf
+    - assets/images/satge2/Day-28_ST-2_Eng (It function).pdf
+#   - Stage3 English material
+    - assets/images/satge3/Day-2_ST-3_Eng (The Conjunctions of If & Unless).pdf
+    - assets/images/satge3/Day-3_ST-3_Eng (The conjunctions of When,Only When & While).pdf
+    - assets/images/satge3/Day-4_ST-3_Eng (🔴 Practice on If, Unless, When, Only When & While).pdf
+    - assets/images/satge3/Day-5_ST-3_Eng (The conjunctions of Before & After).pdf
+    - assets/images/satge3/Day-6_ST-3_Eng (The conjunctions of As soon as, As long as & Till [Until]).pdf
+    - assets/images/satge3/Day-7_ST-3_Eng (🔴 Practice on Time conjunctions).pdf
+    - assets/images/satge3/Day-8_ST-3_Eng (The conjunctions of reasons But, So, Since_As, That's why_Hence, because, Although_Though_Even though, Yet,...... (1).pdf
+    - assets/images/satge3/Day-9_ST-3_Eng (🔴 Practice on conjunctions of reasons).pdf
+    - assets/images/satge3/Day-10_ST-3_Eng (Conjunctions of ever family [Whatever, Whomever, Whoever, Whenever & Wherever]).pdf
+    - assets/images/satge3/Day-11_ST-3_Eng (🔴Practice on all the conjunctions).pdf
+    - assets/images/satge3/Day-12_ST-3_Eng (Present perfect BE FORM).pdf
+    - assets/images/satge3/Day-13_ST-3_Eng (Present Perfect THERE FORM).pdf
+    - assets/images/satge3/Day-14_ST-3_Eng (Present Perfect IT FORM).pdf
+    - assets/images/satge3/Day-15_ST-3_Eng (Present Perfect HAVE FORM).pdf
+    - assets/images/satge3/Day-16_ST-3_Eng (🔴 Practice on Present Perfect BE, THERE, IT & HAVE forms).pdf
+    - assets/images/satge3/Day-17_ST-3_Eng (Present Perfect A.V).pdf
+    - assets/images/satge3/Day-18_ST-3_Eng (Present Perfect P.V).pdf
+    - assets/images/satge3/Day-19_ST-3_Eng (Present Perfect Continuous A.V).pdf
+    - assets/images/satge3/Day-20_ST-3_Eng (🔴 Practice on Present Perfect & Simple tenses).pdf
+    - assets/images/satge3/Day-21_ST-3_Eng (Past Perfect BE FORM).pdf
+    - assets/images/satge3/Day-22_ST-3_Eng (Past Perfect HAVE FORM).pdf
+    - assets/images/satge3/Day-23_ST-3_Eng (Past Perfect ACTIVE VOICE).pdf
+    - assets/images/satge3/Day-24_ST-3_Eng (Past Perfect PASSIVE VOICE).pdf
+    - assets/images/satge3/Day-25_ST-3_Eng (Past Perfect Continuous A.V).pdf
+    - assets/images/satge3/Day-26_ST-3_Eng (🔴Practice on the whole Past Perfect tense).pdf
+    - assets/images/satge3/Day-27_ST-3_Eng (Future Perfect BE & HAVE form).pdf
+    - assets/images/satge3/Day-28_ST-3_Eng (Future Perfect A.V & P.V).pdf
+#   - Stage4 English material
+    - assets/images/stage4/Day-2_ST-4_Eng (Higher modal-1).pdf
+    - assets/images/stage4/Day-3_ST-4_Eng (Higher modal-2).pdf
+    - assets/images/stage4/Day-4_ST-4_Eng (Higher modal-3,4 & 5).pdf
+    - assets/images/stage4/Day-5_ST-4_Eng (Integration of higher modals).pdf
+    - assets/images/stage4/Day-6_ST-4_Eng (🔴 Practice on Integration of higher modals).pdf
+    - assets/images/stage4/Day-7_ST-4_Eng (0-Condition).pdf
+    - assets/images/stage4/Day-8_ST-4_Eng (Real-Condition).pdf
+    - assets/images/stage4/Day-9_ST-4_Eng (Unfulfilled- Condition).pdf
+    - assets/images/stage4/Day-10_ST-4_Eng (Imaginary- Condition).pdf
+    - assets/images/stage4/Day-11_ST-4_Eng (🔴 Practice on conditional clauses).pdf
+    - assets/images/stage4/Day-12_ST-4_Eng (Adjectives followed by prepositions).pdf
+    - assets/images/stage4/Day-13_ST-4_Eng (Verbs followed by prepositions).pdf
+    - assets/images/stage4/Day-14_ST-4_Eng (Phrasal verbs).pdf
+    - assets/images/stage4/Day-15_ST-4_Eng (Phrasal Prepositions).pdf
+    - assets/images/stage4/Day-16_ST-4_Eng (Exclamatory sentences).pdf
+    - assets/images/stage4/Day-17_ST-4_Eng (WH +Statement of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-18_ST-4_Eng (Question tags of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-19_ST-4_Eng (Also, Too & Either of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-20_ST-4_Eng (So, do I & neither do I of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-21_ST-4_Eng (Reflexive pronouns of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-22_ST-4_Eng (Possessive pronouns of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-23_ST-4_Eng (Always, never & ever of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-24_ST-4_Eng (Quantifiers of simple & perfect tenses).pdf
+    - assets/images/stage4/Day-25_ST-4_Eng (Degrees of Comparison[Positive & Comparative]).pdf
+    - assets/images/stage4/Day-26_ST-3_Eng (🔴Practice on the whole Past Perfect tense).pdf
+    - assets/images/stage4/Day-27_ST-3_Eng (Future Perfect BE & HAVE form).pdf
+    - assets/images/stage4/Day-28_ST-3_Eng (Future Perfect A.V & P.V).pdf
 
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/iconlogoforlets.png"
+  image_path: "assets/images/Frame icon.png"
   adaptive_icon_background: "#1EA7E1"
-  adaptive_icon_foreground: "assets/images/iconlogoforlets.png"  
+  adaptive_icon_foreground: "assets/images/Frame icon.png"  
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
