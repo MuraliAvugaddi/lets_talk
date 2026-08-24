@@ -71,7 +71,13 @@ class _LearnScreenState extends State<LearnScreen> {
 
   Future<void> fetchAdminNotification() async {
     try {
-      final response = await http.get(Uri.parse(ApiEndpoints.userNotification));
+      final String userMode = (authController.userData['mode'] ?? "online")
+          .toString()
+          .toLowerCase();
+      final response = await http.get(
+        Uri.parse("${ApiEndpoints.userNotification}?mode=$userMode"),
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['hasNotification'] == true) {
@@ -79,6 +85,13 @@ class _LearnScreenState extends State<LearnScreen> {
             setState(() {
               adminMessage = data['message'];
               isMessageVisible = true;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              adminMessage = null;
+              isMessageVisible = false;
             });
           }
         }
@@ -428,7 +441,7 @@ class _LearnScreenState extends State<LearnScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Admin Broadcast Announcement
+                      // Admin Broadcast Announcement (Filtered by Student Mode)
                       if (adminMessage != null && isMessageVisible) ...[
                         Container(
                           width: double.infinity,
@@ -817,7 +830,8 @@ class _LearnScreenState extends State<LearnScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
+                      color:
+                          isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
                       width: 1.5,
                     ),
                     color: isLocked

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -502,6 +503,79 @@ class AuthController extends GetxController {
     } catch (e) {
       debugPrint("Background refresh failed: $e");
     }
+  }
+
+  // ==========================================
+  // PERMANENT ACCOUNT DELETION
+  // ==========================================
+  Future<void> deleteAccount() async {
+    final user = box.read('user');
+    final String? userId = user != null ? (user['id'] ?? user['_id']) : null;
+    String? token = box.read('token');
+    if (userId == null || token == null) return;
+
+    Get.defaultDialog(
+      title: "Delete Account",
+      titleStyle: GoogleFonts.poppins(
+        color: Colors.redAccent,
+        fontWeight: FontWeight.bold,
+      ),
+      middleText:
+          "Are you sure you want to permanently delete your account? This action cannot be undone.",
+      middleTextStyle: GoogleFonts.poppins(
+        color: Colors.white70,
+        fontSize: 13,
+      ),
+      backgroundColor: const Color(0xff14141E),
+      radius: 16,
+      textConfirm: "Delete Forever",
+      textCancel: "Cancel",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.redAccent,
+      onConfirm: () async {
+        Get.back();
+        isLoading.value = true;
+        try {
+          final response = await http.delete(
+            Uri.parse("${ApiEndpoints.baseUrl}/users/$userId"),
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+          );
+
+          if (response.statusCode == 200) {
+            socket?.disconnect();
+            await _firebaseAuth.signOut();
+            box.erase();
+            userData.value = {};
+            Get.offAll(() => const WelcomeScreen());
+            Get.snackbar(
+              "Account Deleted",
+              "Your account has been deleted permanently.",
+              backgroundColor: Colors.redAccent,
+              colorText: Colors.white,
+            );
+          } else {
+            Get.snackbar(
+              "Error",
+              "Could not delete account. Please try again.",
+              backgroundColor: Colors.redAccent,
+              colorText: Colors.white,
+            );
+          }
+        } catch (e) {
+          Get.snackbar(
+            "Error",
+            "Connection failed: $e",
+            backgroundColor: Colors.redAccent,
+            colorText: Colors.white,
+          );
+        } finally {
+          isLoading.value = false;
+        }
+      },
+    );
   }
 
   void logout() {

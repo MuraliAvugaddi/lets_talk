@@ -1,5 +1,6 @@
 class ApiEndpoints {
-  static const String baseUrl = "https://lets-talk-backend-o06t.onrender.com/api";
+  static const String baseUrl =
+      "https://lets-talk-backend-o06t.onrender.com/api";
   static const String socketUrl = "https://lets-talk-backend-o06t.onrender.com";
 
   // Auth & Profile
@@ -7,9 +8,13 @@ class ApiEndpoints {
   static const String login = "$baseUrl/login";
   static const String resetPassword = "$baseUrl/reset-password";
   static const String profile = "$baseUrl/profile";
+  static const String deleteUser = "$baseUrl/users";
 
   // Notifications
   static const String userNotification = "$baseUrl/user/notification";
+
+  // Feedback
+  static const String submitFeedback = "$baseUrl/user/feedback";
 
   // Attendance
   static const String markAttendance = "$baseUrl/user/mark-attendance";
