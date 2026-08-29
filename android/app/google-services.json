@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:823434055852:android:325fe49cea9c50b72ccf09",
+        "mobilesdk_app_id": "1:823434055852:android:47568933bdd73fe62ccf09",
         "android_client_info": {
-          "package_name": "com.example.lets_talk"
+          "package_name": "com.surendra.letsspeak"
         }
       },
       "oauth_client": [],

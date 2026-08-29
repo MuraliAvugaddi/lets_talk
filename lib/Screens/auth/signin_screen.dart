@@ -5,7 +5,7 @@ import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Screens/auth/forgot_password_screen.dart';
 import 'package:lets_talk/Screens/auth/signup_screen1.dart';
 
-class LoginScreen extends GetView<AuthController> {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
@@ -19,6 +19,12 @@ class LoginScreen extends GetView<AuthController> {
     final Color cardFill = const Color(0xffF8FAFC);
     final Color borderLight = const Color(0xffE2E8F0);
 
+    // Getx controller instance
+    final AuthController controller = Get.find<AuthController>();
+
+    // RxBool for handling password visibility toggle locally and reactively
+    final RxBool obscurePassword = true.obs;
+
     return Scaffold(
       backgroundColor: pureWhite,
       appBar: AppBar(
@@ -26,7 +32,11 @@ class LoginScreen extends GetView<AuthController> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: textDark, size: 18),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: textDark,
+            size: 18,
+          ),
           onPressed: () => Get.back(),
         ),
       ),
@@ -39,7 +49,10 @@ class LoginScreen extends GetView<AuthController> {
             children: [
               // Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: tealMist.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -92,18 +105,30 @@ class LoginScreen extends GetView<AuthController> {
 
               const SizedBox(height: 18),
 
-              // Password Input
-              _buildInputField(
-                controller: controller.loginPasswordController,
-                label: "Password",
-                hintText: "Enter your password",
-                icon: Icons.lock_outline_rounded,
-                isPassword: true,
-                fillColor: cardFill,
-                borderColor: borderLight,
-                accentColor: deepOceanBlue,
-                textColor: textDark,
-                mutedColor: textMuted,
+              // Password Input with Eye Icon Toggle
+              Obx(
+                () => _buildInputField(
+                  controller: controller.loginPasswordController,
+                  label: "Password",
+                  hintText: "Enter your password",
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: obscurePassword.value,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword.value
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: textMuted,
+                      size: 20,
+                    ),
+                    onPressed: () => obscurePassword.toggle(),
+                  ),
+                  fillColor: cardFill,
+                  borderColor: borderLight,
+                  accentColor: deepOceanBlue,
+                  textColor: textDark,
+                  mutedColor: textMuted,
+                ),
               ),
 
               const SizedBox(height: 8),
@@ -114,7 +139,10 @@ class LoginScreen extends GetView<AuthController> {
                 child: TextButton(
                   onPressed: () => Get.to(() => const ForgotPasswordScreen()),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                   ),
                   child: Text(
                     "Forgot Password?",
@@ -209,6 +237,7 @@ class LoginScreen extends GetView<AuthController> {
     required Color textColor,
     required Color mutedColor,
     bool isPassword = false,
+    Widget? suffixIcon,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Column(
@@ -229,12 +258,23 @@ class LoginScreen extends GetView<AuthController> {
           keyboardType: keyboardType,
           style: GoogleFonts.poppins(color: textColor, fontSize: 14),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: accentColor.withOpacity(0.7), size: 20),
+            prefixIcon: Icon(
+              icon,
+              color: accentColor.withOpacity(0.7),
+              size: 20,
+            ),
+            suffixIcon: suffixIcon,
             hintText: hintText,
-            hintStyle: GoogleFonts.poppins(color: mutedColor.withOpacity(0.7), fontSize: 13),
+            hintStyle: GoogleFonts.poppins(
+              color: mutedColor.withOpacity(0.7),
+              fontSize: 13,
+            ),
             filled: true,
             fillColor: fillColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: borderColor, width: 1.2),

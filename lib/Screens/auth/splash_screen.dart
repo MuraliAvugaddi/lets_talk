@@ -79,70 +79,78 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
         child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // --- LOGO CONTAINER WITH AMBIENT GLOW ---
-                Container(
-                  height: 130,
-                  width: 130,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xff14141E),
-                    border: Border.all(color: goldenYellow, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: deepOceanBlue.withOpacity(0.5),
-                        blurRadius: 30,
-                        spreadRadius: 6,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // --- LOGO CONTAINER WITH AMBIENT GLOW ---
+                  Container(
+                    height: 130,
+                    width: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xff14141E),
+                      border: Border.all(color: goldenYellow, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: deepOceanBlue.withOpacity(0.5),
+                          blurRadius: 30,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(22),
+                    child: Image.asset(
+                      "assets/images/logo4x.png",
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.school_rounded,
+                        size: 54,
+                        color: goldenYellow,
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(22),
-                  child: Image.asset(
-                    "assets/images/logo4x.png",
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.school_rounded,
-                      size: 54,
-                      color: goldenYellow,
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 28),
+                  const SizedBox(height: 28),
 
-                Text(
-                  "Let's Talk",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
+                  // --- APP TITLE WITH CLEAN ALIGNMENT ---
+                  Text(
+                    "Let's Speak With Surendra",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                      height: 1.3,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 6),
+                  const SizedBox(height: 8),
 
-                Text(
-                  "Master English & Hindi",
-                  style: GoogleFonts.poppins(
-                    color: tealMist,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
+                  // --- SUBTITLE ---
+                  Text(
+                    "Master English & Hindi",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: tealMist,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 48),
+                  const SizedBox(height: 48),
 
-                CircularProgressIndicator(
-                  color: goldenYellow,
-                  strokeWidth: 3,
-                ),
-              ],
+                  CircularProgressIndicator(
+                    color: goldenYellow,
+                    strokeWidth: 3,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

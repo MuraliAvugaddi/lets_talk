@@ -40,6 +40,8 @@ class SignupStep2 extends GetView<AuthController> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize
+                .min, // <-- Prevents unbounded vertical layout constraints
             children: [
               Text(
                 "How do you want\nto learn?",
@@ -88,7 +90,7 @@ class SignupStep2 extends GetView<AuthController> {
               ),
 
               const SizedBox(height: 40),
-              
+
               // Loading Indicator
               Center(
                 child: Obx(

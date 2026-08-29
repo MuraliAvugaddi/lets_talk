@@ -36,8 +36,12 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     if (!await launchUrl(launchUri)) {
-      Get.snackbar("Error", "Could not dial $phoneNumber",
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Could not dial $phoneNumber",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -47,8 +51,12 @@ class _AccountScreenState extends State<AccountScreen> {
       "https://wa.me/91$cleanPhone?text=${Uri.encodeComponent(message)}",
     );
     if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
-      Get.snackbar("Error", "Could not open WhatsApp for +91 $phoneNumber",
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Could not open WhatsApp for +91 $phoneNumber",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -80,7 +88,9 @@ class _AccountScreenState extends State<AccountScreen> {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               color: darkCard,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               border: Border.all(color: tealMist.withOpacity(0.3)),
             ),
             child: SingleChildScrollView(
@@ -101,14 +111,20 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       GestureDetector(
                         onTap: () => Get.back(),
-                        child: const Icon(Icons.close_rounded, color: Colors.white54),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white54,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     "Tell us about your learning experience with Let's Speak.",
-                    style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Center(
@@ -117,11 +133,14 @@ class _AccountScreenState extends State<AccountScreen> {
                       children: List.generate(5, (index) {
                         return IconButton(
                           icon: Icon(
-                            index < selectedStars ? Icons.star_rounded : Icons.star_outline_rounded,
+                            index < selectedStars
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
                             color: goldenYellow,
                             size: 34,
                           ),
-                          onPressed: () => setModalState(() => selectedStars = index + 1),
+                          onPressed: () =>
+                              setModalState(() => selectedStars = index + 1),
                         );
                       }),
                     ),
@@ -130,15 +149,23 @@ class _AccountScreenState extends State<AccountScreen> {
                   TextField(
                     controller: feedbackController,
                     maxLines: 4,
-                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 13),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
                     decoration: InputDecoration(
                       hintText: "Write your feedback or review here...",
-                      hintStyle: GoogleFonts.poppins(color: Colors.white38, fontSize: 12),
+                      hintStyle: GoogleFonts.poppins(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
                       filled: true,
                       fillColor: const Color(0xff0A0A0E),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: tealMist.withOpacity(0.3)),
+                        borderSide: BorderSide(
+                          color: tealMist.withOpacity(0.3),
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -156,8 +183,12 @@ class _AccountScreenState extends State<AccountScreen> {
                           : () async {
                               final text = feedbackController.text.trim();
                               if (text.isEmpty) {
-                                Get.snackbar("Missing Text", "Please write a few words.",
-                                    backgroundColor: Colors.redAccent, colorText: Colors.white);
+                                Get.snackbar(
+                                  "Missing Text",
+                                  "Please write a few words.",
+                                  backgroundColor: Colors.redAccent,
+                                  colorText: Colors.white,
+                                );
                                 return;
                               }
 
@@ -177,7 +208,8 @@ class _AccountScreenState extends State<AccountScreen> {
                                   }),
                                 );
 
-                                if (response.statusCode == 201 || response.statusCode == 200) {
+                                if (response.statusCode == 201 ||
+                                    response.statusCode == 200) {
                                   Get.back();
                                   Get.snackbar(
                                     "Thank You!",
@@ -186,19 +218,29 @@ class _AccountScreenState extends State<AccountScreen> {
                                     colorText: Colors.white,
                                   );
                                 } else {
-                                  Get.snackbar("Notice", "Failed to submit. Try again later.",
-                                      backgroundColor: Colors.redAccent, colorText: Colors.white);
+                                  Get.snackbar(
+                                    "Notice",
+                                    "Failed to submit. Try again later.",
+                                    backgroundColor: Colors.redAccent,
+                                    colorText: Colors.white,
+                                  );
                                 }
                               } catch (e) {
-                                Get.snackbar("Error", "Submission failed: $e",
-                                    backgroundColor: Colors.redAccent, colorText: Colors.white);
+                                Get.snackbar(
+                                  "Error",
+                                  "Submission failed: $e",
+                                  backgroundColor: Colors.redAccent,
+                                  colorText: Colors.white,
+                                );
                               } finally {
                                 setModalState(() => isSubmitting = false);
                               }
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: deepOceanBlue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       child: isSubmitting
                           ? const CircularProgressIndicator(color: Colors.white)
@@ -328,19 +370,28 @@ class _AccountScreenState extends State<AccountScreen> {
                       String mode = controller.userData['mode'] ?? "online";
                       bool isOnline = mode.toLowerCase() == "online";
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
-                          color: isOnline ? tealMist.withOpacity(0.18) : goldenYellow.withOpacity(0.18),
+                          color: isOnline
+                              ? tealMist.withOpacity(0.18)
+                              : goldenYellow.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: isOnline ? tealMist.withOpacity(0.5) : goldenYellow.withOpacity(0.5),
+                            color: isOnline
+                                ? tealMist.withOpacity(0.5)
+                                : goldenYellow.withOpacity(0.5),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              isOnline ? Icons.wifi_rounded : Icons.location_on_rounded,
+                              isOnline
+                                  ? Icons.wifi_rounded
+                                  : Icons.location_on_rounded,
                               size: 13,
                               color: isOnline ? tealMist : goldenYellow,
                             ),
@@ -367,7 +418,10 @@ class _AccountScreenState extends State<AccountScreen> {
               // --- 2. PAYMENT & FEES NAVIGATION CONTAINER ---
               Obx(() {
                 final bool isOnline =
-                    (controller.userData['mode'] ?? "online").toString().toLowerCase() == "online";
+                    (controller.userData['mode'] ?? "online")
+                        .toString()
+                        .toLowerCase() ==
+                    "online";
 
                 return Container(
                   width: double.infinity,
@@ -376,10 +430,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: goldenYellow.withOpacity(0.35)),
                     gradient: LinearGradient(
-                      colors: [
-                        goldenYellow.withOpacity(0.08),
-                        darkCard,
-                      ],
+                      colors: [goldenYellow.withOpacity(0.08), darkCard],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -388,12 +439,19 @@ class _AccountScreenState extends State<AccountScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
-                      onTap: () => Get.to(() => PaymentDetailsScreen(
-                            isOnline: isOnline,
-                            managerPhone: isOnline ? onlineManagerPhone : offlineManagerPhone,
-                          )),
+                      onTap: () => Get.to(
+                        () => PaymentDetailsScreen(
+                          isOnline: isOnline,
+                          managerPhone: isOnline
+                              ? onlineManagerPhone
+                              : offlineManagerPhone,
+                        ),
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -402,7 +460,11 @@ class _AccountScreenState extends State<AccountScreen> {
                                 color: goldenYellow.withOpacity(0.18),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.qr_code_2_rounded, color: goldenYellow, size: 24),
+                              child: Icon(
+                                Icons.qr_code_2_rounded,
+                                color: goldenYellow,
+                                size: 24,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -416,10 +478,14 @@ class _AccountScreenState extends State<AccountScreen> {
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.bold,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    isOnline ? "Mode: Online UPI QR" : "Mode: Offline Center UPI QR",
+                                    isOnline
+                                        ? "Mode: Online UPI QR"
+                                        : "Mode: Offline Center UPI QR",
                                     style: GoogleFonts.poppins(
                                       color: goldenYellow,
                                       fontSize: 11.5,
@@ -482,7 +548,10 @@ class _AccountScreenState extends State<AccountScreen> {
               // --- 6. COMMUNITY INVITATION CARD ---
               Obx(() {
                 final bool isOnline =
-                    (controller.userData['mode'] ?? "online").toString().toLowerCase() == "online";
+                    (controller.userData['mode'] ?? "online")
+                        .toString()
+                        .toLowerCase() ==
+                    "online";
 
                 return GestureDetector(
                   onTap: () => _launchCommunityLink(isOnline),
@@ -509,7 +578,11 @@ class _AccountScreenState extends State<AccountScreen> {
                             color: accentGreen.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.groups_rounded, color: accentGreen, size: 22),
+                          child: Icon(
+                            Icons.groups_rounded,
+                            color: accentGreen,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -525,15 +598,27 @@ class _AccountScreenState extends State<AccountScreen> {
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Text(
                                 "Join active discussions & spoken groups",
-                                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11.5),
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white70,
+                                  fontSize: 11.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios_rounded, color: accentGreen, size: 14),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: accentGreen,
+                          size: 14,
+                        ),
                       ],
                     ),
                   ),
@@ -545,9 +630,16 @@ class _AccountScreenState extends State<AccountScreen> {
               // --- 7. HELPLINE & MANAGEMENT CONTACT SECTION ---
               Obx(() {
                 final bool isOnline =
-                    (controller.userData['mode'] ?? "online").toString().toLowerCase() == "online";
-                final String managerPhone = isOnline ? onlineManagerPhone : offlineManagerPhone;
-                final String managerTitle = isOnline ? "Online Manager" : "Offline Manager";
+                    (controller.userData['mode'] ?? "online")
+                        .toString()
+                        .toLowerCase() ==
+                    "online";
+                final String managerPhone = isOnline
+                    ? onlineManagerPhone
+                    : offlineManagerPhone;
+                final String managerTitle = isOnline
+                    ? "Online Manager"
+                    : "Offline Manager";
 
                 return Container(
                   width: double.infinity,
@@ -622,7 +714,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () => controller.logout(),
-                  icon: const Icon(Icons.logout_rounded, color: Colors.amber, size: 18),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.amber,
+                    size: 18,
+                  ),
                   label: Text(
                     "Log Out",
                     style: GoogleFonts.poppins(
@@ -650,7 +746,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () => controller.deleteAccount(),
-                  icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 18),
+                  icon: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
                   label: Text(
                     "Delete Account",
                     style: GoogleFonts.poppins(
@@ -664,7 +764,9 @@ class _AccountScreenState extends State<AccountScreen> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.redAccent.withOpacity(0.35)),
+                      side: BorderSide(
+                        color: Colors.redAccent.withOpacity(0.35),
+                      ),
                     ),
                   ),
                 ),
@@ -716,15 +818,23 @@ class _AccountScreenState extends State<AccountScreen> {
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Icon(Icons.arrow_forward_ios_rounded, color: iconColor, size: 16),
           ],
         ),
@@ -742,28 +852,50 @@ class _AccountScreenState extends State<AccountScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              role,
-              style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-            Text(
-              "$name • +91 $phone",
-              style: GoogleFonts.poppins(color: Colors.white54, fontSize: 11.5),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                role,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                "$name • +91 $phone",
+                style: GoogleFonts.poppins(
+                  color: Colors.white54,
+                  fontSize: 11.5,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.call_rounded, color: Color(0xff158DFE), size: 20),
+              icon: const Icon(
+                Icons.call_rounded,
+                color: Color(0xff158DFE),
+                size: 20,
+              ),
               onPressed: onCall,
               tooltip: "Call",
             ),
             IconButton(
-              icon: Icon(Icons.chat_bubble_rounded, color: accentGreen, size: 20),
+              icon: Icon(
+                Icons.chat_bubble_rounded,
+                color: accentGreen,
+                size: 20,
+              ),
               onPressed: onWhatsApp,
               tooltip: "WhatsApp",
             ),
@@ -791,8 +923,12 @@ class PaymentDetailsScreen extends StatelessWidget {
       "https://wa.me/91$cleanPhone?text=${Uri.encodeComponent(message)}",
     );
     if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
-      Get.snackbar("Error", "Could not open WhatsApp for +91 $phoneNumber",
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      Get.snackbar(
+        "Error",
+        "Could not open WhatsApp for +91 $phoneNumber",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -810,12 +946,20 @@ class PaymentDetailsScreen extends StatelessWidget {
         backgroundColor: darkCard,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
           onPressed: () => Get.back(),
         ),
         title: Text(
           isOnline ? "Online Tuition Fees" : "Offline Center Fees",
-          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -834,7 +978,9 @@ class PaymentDetailsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    isOnline ? "Official Online Payment QR" : "Official Offline Payment QR",
+                    isOnline
+                        ? "Official Online Payment QR"
+                        : "Official Offline Payment QR",
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 16,
@@ -845,7 +991,10 @@ class PaymentDetailsScreen extends StatelessWidget {
                   Text(
                     "Scan via PhonePe, Google Pay, Paytm or BHIM UPI",
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white60,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Container(
@@ -866,7 +1015,11 @@ class PaymentDetailsScreen extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.qr_code_2_rounded, size: 100, color: deepOceanBlue),
+                            Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 100,
+                              color: deepOceanBlue,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               "UPI Payment QR",
@@ -885,7 +1038,11 @@ class PaymentDetailsScreen extends StatelessWidget {
                   Text(
                     "Step 1: Scan and complete payment\nStep 2: Take a screenshot of the receipt\nStep 3: Submit receipt to your manager below",
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12, height: 1.5),
+                    style: GoogleFonts.poppins(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -904,12 +1061,17 @@ class PaymentDetailsScreen extends StatelessWidget {
                 icon: const Icon(Icons.send_rounded, size: 18),
                 label: Text(
                   "Share Screenshot via WhatsApp",
-                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: deepOceanBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),

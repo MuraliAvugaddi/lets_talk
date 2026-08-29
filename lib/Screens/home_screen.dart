@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/connectivityController.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:in_app_update/in_app_update.dart';
 
 // --- SCREEN IMPORTS ---
 import 'package:lets_talk/Screens/English_club5/English_club_stage1_screen.dart';
@@ -32,6 +33,41 @@ import 'package:lets_talk/Screens/English_online_5/English_online_stage5_screen.
 import 'package:lets_talk/Screens/English_online_5/English_online_stage6_screen.dart';
 import 'package:lets_talk/Screens/English_online_5/English_online_stage7_screen.dart';
 
+// --- IN-APP UPDATE CONTROLLER ---
+class UpdateController extends GetxController {
+  @override
+  void onReady() {
+    super.onReady();
+    checkAppUpdate();
+  }
+
+  Future<void> checkAppUpdate() async {
+    try {
+      AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
+
+      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
+        // Immediate update forces the user to update
+        if (updateInfo.immediateUpdateAllowed) {
+          InAppUpdate.performImmediateUpdate().catchError((e) {
+            Get.snackbar("Update Failed", e.toString());
+            return AppUpdateResult.userDeniedUpdate;
+          });
+        }
+        // Flexible update downloads in the background
+        else if (updateInfo.flexibleUpdateAllowed) {
+          InAppUpdate.startFlexibleUpdate().then((result) {
+            if (result == AppUpdateResult.success) {
+              InAppUpdate.completeFlexibleUpdate();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("In-App Update error: $e");
+    }
+  }
+}
+
 class LearnScreen extends StatefulWidget {
   const LearnScreen({super.key});
 
@@ -57,6 +93,9 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize In-App Update controller when home screen loads
+    Get.put(UpdateController());
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAllData();
     });
@@ -187,7 +226,6 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   Widget build(BuildContext context) {
     const Color headerColor = Color(0xff14141E);
-    const Color accentBlue = Color(0xff158DFE);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -258,7 +296,7 @@ class _LearnScreenState extends State<LearnScreen> {
                       child: Text(
                         (authController.userData['name'] ?? 'L').isNotEmpty
                             ? (authController.userData['name'] ?? 'L')[0]
-                                .toUpperCase()
+                                  .toUpperCase()
                             : 'L',
                         style: GoogleFonts.poppins(
                           color: goldenYellow,
@@ -543,11 +581,11 @@ class _LearnScreenState extends State<LearnScreen> {
                         itemCount: stagesData.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.15,
-                        ),
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.15,
+                            ),
                         itemBuilder: (context, index) {
                           final stage = stagesData[index];
                           return _buildModernStageCard(
@@ -572,9 +610,7 @@ class _LearnScreenState extends State<LearnScreen> {
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: tealMist.withOpacity(0.3),
-                          ),
+                          border: Border.all(color: tealMist.withOpacity(0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,8 +866,9 @@ class _LearnScreenState extends State<LearnScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color:
-                          isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
+                      color: isLocked
+                          ? Colors.white12
+                          : tealMist.withOpacity(0.6),
                       width: 1.5,
                     ),
                     color: isLocked

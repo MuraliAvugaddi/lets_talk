@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 2.0.3+5
 
 environment:
   sdk: ^3.10.1
@@ -54,6 +54,7 @@ dependencies:
   socket_io_client: ^3.1.6
   flutter_pdfview: ^1.4.5
   path_provider: ^2.1.6
+  in_app_update: ^4.2.2
 
 dev_dependencies:
   flutter_test:
@@ -99,7 +100,7 @@ flutter:
     - assets/images/satge1/Day-17_ST-1_Eng (Past Simple Passive Voice).pdf
     - assets/images/satge1/Day-18_ST-1_Eng (Present Simple P.V).pdf
     - assets/images/satge1/Day-19_ST-1_Eng (Future Simple P.V).pdf
-    - assets/images/satge1/Day-20_ST-1_Eng (🔴Practice On Simple A.v & P.v).pdf
+    - assets/images/satge1/Day-16_ST-1_Eng (🔴Practice On Simple A.v).pdf
     - assets/images/satge1/Day-21_ST-1_Eng (Past Continuous A.V & P.V).pdf
     - assets/images/satge1/Day-22_ST-1_Eng (Present Continuous A.V & P.V).pdf
     - assets/images/satge1/Day-22_ST-1_Eng (Present Continuous A.V & P.V).pdf

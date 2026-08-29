@@ -135,7 +135,7 @@ class EnglishStage1Screen extends StatelessWidget {
         "title": "Practice On Simple A.V",
         "subtitle": "Comprehensive active voice exercises",
         "pdfPath":
-            "assets/images/satge1/Day-16_ST-1_Eng (🔴Practice On Simple A.V).pdf",
+            "assets/images/satge1/Day-16_ST-1_Eng (🔴Practice On Simple A.v).pdf",
         "isPractice": true,
       },
       {
@@ -167,7 +167,7 @@ class EnglishStage1Screen extends StatelessWidget {
         "title": "Practice On Simple A.V & P.V",
         "subtitle": "Active vs passive comparison & drills",
         "pdfPath":
-            "assets/images/satge1/Day-20_ST-1_Eng (🔴Practice On Simple A.V & P.V).pdf",
+            "assets/images/satge1/Day-16_ST-1_Eng (🔴Practice On Simple A.v).pdf",
         "isPractice": true,
       },
       {

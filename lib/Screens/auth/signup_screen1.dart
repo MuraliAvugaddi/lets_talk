@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 
-class SignupStep1 extends GetView<AuthController> {
+class SignupStep1 extends StatelessWidget {
   const SignupStep1({super.key});
 
   @override
@@ -16,6 +16,12 @@ class SignupStep1 extends GetView<AuthController> {
     final Color textMuted = const Color(0xff64748B);
     final Color cardFill = const Color(0xffF8FAFC);
     final Color borderLight = const Color(0xffE2E8F0);
+
+    // Getx controller instance
+    final AuthController controller = Get.find<AuthController>();
+
+    // RxBool for handling password visibility toggle locally and reactively
+    final RxBool obscurePassword = true.obs;
 
     return Scaffold(
       backgroundColor: pureWhite,
@@ -109,21 +115,33 @@ class SignupStep1 extends GetView<AuthController> {
                           : null,
                     ),
                     const SizedBox(height: 18),
-                    _buildTextField(
-                      ctrl: controller.passwordController,
-                      label: "Create Password",
-                      hint: "Minimum 6 characters",
-                      icon: Icons.lock_outline_rounded,
-                      isPass: true,
-                      fillColor: cardFill,
-                      borderColor: borderLight,
-                      accentColor: deepOceanBlue,
-                      textColor: textDark,
-                      mutedColor: textMuted,
-                      validator: (value) => value!.length < 6
-                          ? "Password must be 6+ characters"
-                          : null,
-                    ),
+                    
+                    // --- PASSWORD FIELD WITH EYE TOGGLE ---
+                    Obx(() => _buildTextField(
+                          ctrl: controller.passwordController,
+                          label: "Create Password",
+                          hint: "Minimum 6 characters",
+                          icon: Icons.lock_outline_rounded,
+                          isPass: obscurePassword.value, // Reactive toggle state
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePassword.value
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: textMuted,
+                              size: 20,
+                            ),
+                            onPressed: () => obscurePassword.toggle(),
+                          ),
+                          fillColor: cardFill,
+                          borderColor: borderLight,
+                          accentColor: deepOceanBlue,
+                          textColor: textDark,
+                          mutedColor: textMuted,
+                          validator: (value) => value!.length < 6
+                              ? "Password must be 6+ characters"
+                              : null,
+                        )),
                   ],
                 ),
               ),
@@ -172,6 +190,7 @@ class SignupStep1 extends GetView<AuthController> {
     required Color textColor,
     required Color mutedColor,
     bool isPass = false,
+    Widget? suffixIcon, // Added suffixIcon parameter
     TextInputType type = TextInputType.text,
     TextCapitalization capitalization = TextCapitalization.none,
     String? Function(String?)? validator,
@@ -197,6 +216,7 @@ class SignupStep1 extends GetView<AuthController> {
           style: GoogleFonts.poppins(color: textColor, fontSize: 14),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: accentColor.withOpacity(0.7), size: 20),
+            suffixIcon: suffixIcon, // Bound suffixIcon to decoration
             hintText: hint,
             hintStyle: GoogleFonts.poppins(color: mutedColor.withOpacity(0.7), fontSize: 13),
             filled: true,

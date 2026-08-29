@@ -13,7 +13,6 @@ class OtpVerificationScreen extends GetView<AuthController> {
     // --- BRAND PALETTE ---
     final Color deepOceanBlue = const Color(0xff065381);
     final Color tealMist = const Color(0xff508F97);
-    final Color goldenYellow = const Color(0xffF2C94C);
     final Color pureWhite = const Color(0xffFFFFFF);
     final Color textDark = const Color(0xff0F172A);
     final Color textMuted = const Color(0xff64748B);
@@ -52,6 +51,7 @@ class OtpVerificationScreen extends GetView<AuthController> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // <-- Fixed unbounded height bug
             children: [
               // Badge
               Container(
@@ -132,7 +132,7 @@ class OtpVerificationScreen extends GetView<AuthController> {
 
               const SizedBox(height: 36),
 
-              // Verify Action Button
+              // Verify Action Button wrapped cleanly to avoid layout evaluation loops
               Obx(
                 () => SizedBox(
                   width: double.infinity,

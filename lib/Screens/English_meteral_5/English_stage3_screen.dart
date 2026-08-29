@@ -80,7 +80,7 @@ class EnglishStage3Screen extends StatelessWidget {
         "title": "Conjunctions of Reasons & Contrast",
         "subtitle": "But, So, Since, That's why, Hence, Although, Yet",
         "pdfPath":
-            "assets/images/satge3/Day-8_ST-3_Eng (The conjunctions of reasons But, So, Since_As, That's why_Hence, because, Although_Though_Even though, Yet,....... (1).pdf",
+            "assets/images/satge3/Day-8_ST-3_Eng (The conjunctions of reasons But, So, Since_As, That's why_Hence, because, Although_Though_Even though, Yet,...... (1).pdf",
         "isPractice": false,
       },
       {

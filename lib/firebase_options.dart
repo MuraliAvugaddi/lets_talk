@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -51,12 +48,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCnYgiwI8kQpdQhJ3-FUrzMoHf9he6Dnx4',
-    appId: '1:823434055852:android:325fe49cea9c50b72ccf09',
+    appId: '1:823434055852:android:47568933bdd73fe62ccf09',
     messagingSenderId: '823434055852',
     projectId: 'let-s-speak-cbc27',
     storageBucket: 'let-s-speak-cbc27.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCp0DAq0B7Pvy1oZW7HO0DjuxIS3mawZXQ',
     appId: '1:823434055852:ios:f3980a01427959a62ccf09',
@@ -64,5 +60,14 @@ class DefaultFirebaseOptions {
     projectId: 'let-s-speak-cbc27',
     storageBucket: 'let-s-speak-cbc27.firebasestorage.app',
     iosBundleId: 'com.example.letsTalk',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAQpwUhta-3kk1f2CB0n-H3aY0Crm8cheM',
+    appId: '1:823434055852:web:bfd82393ad0626132ccf09',
+    messagingSenderId: '823434055852',
+    projectId: 'let-s-speak-cbc27',
+    authDomain: 'let-s-speak-cbc27.firebaseapp.com',
+    storageBucket: 'let-s-speak-cbc27.firebasestorage.app',
+    measurementId: 'G-ZTJ76WGK4Y',
   );
 }
