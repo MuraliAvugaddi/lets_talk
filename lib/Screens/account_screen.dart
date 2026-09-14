@@ -29,9 +29,8 @@ class _AccountScreenState extends State<AccountScreen> {
 
   // --- OFFICIAL CONTACT NUMBERS ---
   final String offlineManagerPhone = "7842941055";
-  final String onlineManagerPhone = "7093857473";
-  final String mdPhone = "9959751194"; // Surendhra Sir (MD)
-  final String techSupportPhone = "9959751194";
+  final String onlineManagerPhone = "7386172347";
+  final String techSupportPhone = "9398315945";
 
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
@@ -676,20 +675,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
                       const Divider(color: Colors.white10, height: 20),
 
-                      // Surendhra Sir (MD) Row
-                      _buildContactRow(
-                        role: "Managing Director (MD)",
-                        name: "Surendhra Sir",
-                        phone: mdPhone,
-                        onCall: () => _makePhoneCall(mdPhone),
-                        onWhatsApp: () => _openWhatsApp(
-                          mdPhone,
-                          "Respected Surendhra Sir, I am ${controller.userData['name'] ?? 'Student'}. Contacting regarding institute support.",
-                        ),
-                      ),
-
-                      const Divider(color: Colors.white10, height: 20),
-
                       // Technical Support Line
                       _buildContactRow(
                         role: "Technical App Support",
@@ -978,9 +963,7 @@ class PaymentDetailsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    isOnline
-                        ? "Official Online Payment QR"
-                        : "Official Offline Payment QR",
+                    "Official Payment QR",
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontSize: 16,
@@ -1007,9 +990,7 @@ class PaymentDetailsScreen extends StatelessWidget {
                       border: Border.all(color: goldenYellow, width: 2),
                     ),
                     child: Image.asset(
-                      isOnline
-                          ? "assets/images/qr_online.png"
-                          : "assets/images/qr_offline.png",
+                      "assets/images/paymentqrcode.png",
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => Center(
                         child: Column(

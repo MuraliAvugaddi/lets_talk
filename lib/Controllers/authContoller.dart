@@ -43,6 +43,10 @@ class AuthController extends GetxController {
 
   var userData = {}.obs;
 
+  // 🔔 Reactive notification state so UI updates instantly
+  var adminMessage = RxnString();
+  var isMessageVisible = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -66,6 +70,13 @@ class AuthController extends GetxController {
       return "+$clean";
     }
     return phone;
+  }
+
+  // --- CLEAR LOCAL STORAGE CACHE ---
+  void clearLocalUserData() {
+    socket?.disconnect();
+    box.erase(); // Wipes all cached storage keys and old user states
+    userData.value = {};
   }
 
   // ==========================================
@@ -105,20 +116,38 @@ class AuthController extends GetxController {
         if (data.containsKey('mode')) {
           current['mode'] = data['mode'];
         }
+        if (data.containsKey('onlineSection')) {
+          current['onlineSection'] = data['onlineSection'];
+        }
+        if (data.containsKey('feeStatus')) {
+          current['feeStatus'] = data['feeStatus'];
+        }
 
-        // Force reactive update across all screens immediately
         userData.value = current;
         userData.refresh();
         box.write('user', current);
 
         Get.snackbar(
-          "Profile Updated",
-          "Your access permissions & mode have been updated live!",
+          "Access Synchronized",
+          "Your institute permissions have been updated live!",
           backgroundColor: const Color(0xff7F56D9),
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
           snackPosition: SnackPosition.BOTTOM,
         );
+      }
+    });
+
+    // ⚡ LIVE NOTIFICATION LISTENER FROM ADMIN
+    socket!.on('new_notification', (data) {
+      if (data is Map) {
+        if (data['hasNotification'] == true) {
+          adminMessage.value = data['message'];
+          isMessageVisible.value = true;
+        } else {
+          adminMessage.value = null;
+          isMessageVisible.value = false;
+        }
       }
     });
 
@@ -146,10 +175,8 @@ class AuthController extends GetxController {
   }
 
   void forceLogout(String reason) async {
-    socket?.disconnect();
+    clearLocalUserData();
     await _firebaseAuth.signOut();
-    box.erase();
-    userData.value = {};
     Get.offAll(() => const WelcomeScreen());
     Get.snackbar(
       'Logged Out',
@@ -263,9 +290,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ==========================================
-  // SIGNUP & LOGIN
-  // ==========================================
   void submitStep1() {
     if (signupFormKey.currentState!.validate()) {
       Get.to(() => const SignupStep2());
@@ -505,9 +529,6 @@ class AuthController extends GetxController {
     }
   }
 
-  // ==========================================
-  // PERMANENT ACCOUNT DELETION
-  // ==========================================
   Future<void> deleteAccount() async {
     final user = box.read('user');
     final String? userId = user != null ? (user['id'] ?? user['_id']) : null;
@@ -522,10 +543,7 @@ class AuthController extends GetxController {
       ),
       middleText:
           "Are you sure you want to permanently delete your account? This action cannot be undone.",
-      middleTextStyle: GoogleFonts.poppins(
-        color: Colors.white70,
-        fontSize: 13,
-      ),
+      middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
       backgroundColor: const Color(0xff14141E),
       radius: 16,
       textConfirm: "Delete Forever",
@@ -545,10 +563,8 @@ class AuthController extends GetxController {
           );
 
           if (response.statusCode == 200) {
-            socket?.disconnect();
+            clearLocalUserData();
             await _firebaseAuth.signOut();
-            box.erase();
-            userData.value = {};
             Get.offAll(() => const WelcomeScreen());
             Get.snackbar(
               "Account Deleted",
@@ -590,10 +606,8 @@ class AuthController extends GetxController {
       titleStyle: const TextStyle(color: Colors.white),
       middleTextStyle: const TextStyle(color: Colors.white70),
       onConfirm: () async {
-        socket?.disconnect();
+        clearLocalUserData();
         await _firebaseAuth.signOut();
-        box.erase();
-        userData.value = {};
         Get.back();
         Get.offAll(() => const WelcomeScreen());
       },

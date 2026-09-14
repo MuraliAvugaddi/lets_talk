@@ -1,6 +1,6 @@
 class ApiEndpoints {
-  static const String baseUrl = "http://192.168.1.4:5000/api";
-  static const String socketUrl = "http://192.168.1.4:5000";
+  static const String baseUrl = "http://192.168.1.3:5000/api";
+  static const String socketUrl = "http://192.168.1.3:5000";
 
   // Auth & Profile
   static const String register = "$baseUrl/register";

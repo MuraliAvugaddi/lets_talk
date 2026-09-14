@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/connectivityController.dart';
@@ -9,13 +9,13 @@ import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:in_app_update/in_app_update.dart';
 
 // --- SCREEN IMPORTS ---
-import 'package:lets_talk/Screens/English_club5/English_club_stage1_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage2_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage3_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage4_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage5_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage6_screen.dart';
-import 'package:lets_talk/Screens/English_club5/English_club_stage7_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage1_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage2_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage3_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage4_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage5_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage6_screen.dart';
+// import 'package:lets_talk/Screens/English_club5/English_club_stage7_screen.dart';
 
 import 'package:lets_talk/Screens/English_meteral_5/English_stage1_screen.dart';
 import 'package:lets_talk/Screens/English_meteral_5/English_stage2_screen.dart';
@@ -46,15 +46,12 @@ class UpdateController extends GetxController {
       AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
 
       if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
-        // Immediate update forces the user to update
         if (updateInfo.immediateUpdateAllowed) {
           InAppUpdate.performImmediateUpdate().catchError((e) {
             Get.snackbar("Update Failed", e.toString());
             return AppUpdateResult.userDeniedUpdate;
           });
-        }
-        // Flexible update downloads in the background
-        else if (updateInfo.flexibleUpdateAllowed) {
+        } else if (updateInfo.flexibleUpdateAllowed) {
           InAppUpdate.startFlexibleUpdate().then((result) {
             if (result == AppUpdateResult.success) {
               InAppUpdate.completeFlexibleUpdate();
@@ -80,9 +77,6 @@ class _LearnScreenState extends State<LearnScreen> {
   final ConnectivityController netController =
       Get.find<ConnectivityController>();
 
-  String? adminMessage;
-  bool isMessageVisible = true;
-
   // --- BRAND COLORS ---
   final Color deepOceanBlue = const Color(0xff065381);
   final Color tealMist = const Color(0xff508F97);
@@ -93,7 +87,6 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize In-App Update controller when home screen loads
     Get.put(UpdateController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -120,19 +113,11 @@ class _LearnScreenState extends State<LearnScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['hasNotification'] == true) {
-          if (mounted) {
-            setState(() {
-              adminMessage = data['message'];
-              isMessageVisible = true;
-            });
-          }
+          authController.adminMessage.value = data['message'];
+          authController.isMessageVisible.value = true;
         } else {
-          if (mounted) {
-            setState(() {
-              adminMessage = null;
-              isMessageVisible = false;
-            });
-          }
+          authController.adminMessage.value = null;
+          authController.isMessageVisible.value = false;
         }
       }
     } catch (e) {
@@ -348,6 +333,12 @@ class _LearnScreenState extends State<LearnScreen> {
                   vertical: 16,
                 ),
                 child: Obx(() {
+                  final bool isOnlineStudent =
+                      (authController.userData['mode'] ?? "online")
+                          .toString()
+                          .toLowerCase() ==
+                      "online";
+
                   final List<Map<String, dynamic>> stagesData = [
                     {
                       "title": "Stage 1",
@@ -438,49 +429,12 @@ class _LearnScreenState extends State<LearnScreen> {
                     },
                   ];
 
-                  final List<Map<String, dynamic>> clubData = [
-                    {
-                      "label": "Stage 1",
-                      "dest": const EnglishClubStage1Screen(),
-                      "isLocked": _isStageLocked('stage1'),
-                    },
-                    {
-                      "label": "Stage 2",
-                      "dest": const EnglishClubStage2Screen(),
-                      "isLocked": _isStageLocked('stage2'),
-                    },
-                    {
-                      "label": "Stage 3",
-                      "dest": const EnglishClubStage3Screen(),
-                      "isLocked": _isStageLocked('stage3'),
-                    },
-                    {
-                      "label": "Stage 4",
-                      "dest": const EnglishClubStage4Screen(),
-                      "isLocked": _isStageLocked('stage4'),
-                    },
-                    {
-                      "label": "Stage 5",
-                      "dest": const EnglishClubStage5Screen(),
-                      "isLocked": _isStageLocked('stage5'),
-                    },
-                    {
-                      "label": "Stage 6",
-                      "dest": const EnglishClubStage6Screen(),
-                      "isLocked": _isStageLocked('stage6'),
-                    },
-                    {
-                      "label": "Stage 7",
-                      "dest": const EnglishClubStage7Screen(),
-                      "isLocked": _isStageLocked('stage7'),
-                    },
-                  ];
-
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Admin Broadcast Announcement (Filtered by Student Mode)
-                      if (adminMessage != null && isMessageVisible) ...[
+                      // ⚡ Real-Time Admin Broadcast Announcement Banner
+                      if (authController.adminMessage.value != null &&
+                          authController.isMessageVisible.value) ...[
                         Container(
                           width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 20),
@@ -526,7 +480,7 @@ class _LearnScreenState extends State<LearnScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      adminMessage!,
+                                      authController.adminMessage.value!,
                                       style: GoogleFonts.poppins(
                                         color: Colors.white70,
                                         fontSize: 13,
@@ -537,11 +491,74 @@ class _LearnScreenState extends State<LearnScreen> {
                               ),
                               GestureDetector(
                                 onTap: () =>
-                                    setState(() => isMessageVisible = false),
+                                    authController.isMessageVisible.value =
+                                        false,
                                 child: const Icon(
                                   Icons.close_rounded,
                                   color: Colors.grey,
                                   size: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // 🚀 ONLINE CLASSES PLACED AT THE TOP (UX BOOST)
+                      if (isOnlineStudent) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: tealMist.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: deepOceanBlue.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.live_tv_rounded,
+                                      color: goldenYellow,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    "Interactive Online Classes",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                child: Row(
+                                  children: onlineClassesData.map((item) {
+                                    return _buildClassAvatar(
+                                      context,
+                                      item["label"],
+                                      deepOceanBlue,
+                                      item["dest"],
+                                      isLocked: item["isLocked"],
+                                    );
+                                  }).toList(),
                                 ),
                               ),
                             ],
@@ -600,111 +617,6 @@ class _LearnScreenState extends State<LearnScreen> {
                           );
                         },
                       ),
-
-                      const SizedBox(height: 24),
-
-                      // Online Classes & Live Interactive Group
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: tealMist.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: deepOceanBlue.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.live_tv_rounded,
-                                    color: goldenYellow,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  "Interactive Online Classes",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: onlineClassesData.map((item) {
-                                  return _buildClassAvatar(
-                                    context,
-                                    item["label"],
-                                    deepOceanBlue,
-                                    item["dest"],
-                                    isLocked: item["isLocked"],
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-
-                            const SizedBox(height: 18),
-                            Divider(color: Colors.white.withOpacity(0.06)),
-                            const SizedBox(height: 14),
-
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: tealMist.withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.groups_rounded,
-                                    color: goldenYellow,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  "Let's Speak in Club",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: clubData.map((item) {
-                                  return _buildClubButton(
-                                    context,
-                                    item["label"],
-                                    item["dest"],
-                                    isLocked: item["isLocked"],
-                                    accentColor: tealMist,
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 25),
                     ],
                   );
@@ -717,7 +629,6 @@ class _LearnScreenState extends State<LearnScreen> {
     );
   }
 
-  // Modern Stage Grid Card
   Widget _buildModernStageCard({
     required BuildContext context,
     required String title,
@@ -835,7 +746,6 @@ class _LearnScreenState extends State<LearnScreen> {
     );
   }
 
-  // Modern Class Circle Avatar Widget
   Widget _buildClassAvatar(
     BuildContext context,
     String label,
@@ -911,55 +821,6 @@ class _LearnScreenState extends State<LearnScreen> {
                 fontWeight: isLocked ? FontWeight.normal : FontWeight.w500,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Modern Club Button Widget
-  Widget _buildClubButton(
-    BuildContext context,
-    String label,
-    Widget destination, {
-    required bool isLocked,
-    required Color accentColor,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        if (isLocked) {
-          showAccessDeniedDialog("Admin approval required");
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isLocked ? Colors.white10 : accentColor.withOpacity(0.4),
-          ),
-          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.12),
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: isLocked ? Colors.white30 : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            if (isLocked) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.lock_rounded, color: Colors.amber, size: 12),
-            ],
           ],
         ),
       ),

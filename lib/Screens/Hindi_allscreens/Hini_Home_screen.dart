@@ -4,14 +4,6 @@ import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 
 // --- STAGE SCREEN IMPORTS ---
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage1_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage2_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage3_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage4_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage5_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage6_screen.dart';
-import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_club_5/Hindi_club_stage7_screen.dart';
-
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage1_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage2_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage3_screen.dart';
@@ -229,44 +221,6 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
       },
     ];
 
-    final List<Map<String, dynamic>> clubData = [
-      {
-        "label": "Stage 1",
-        "dest": const HindiClubStage1Screen(),
-        "isLocked": _isLocked('stage1'),
-      },
-      {
-        "label": "Stage 2",
-        "dest": const HindiClubStage2Screen(),
-        "isLocked": _isLocked('stage2'),
-      },
-      {
-        "label": "Stage 3",
-        "dest": const HindiClubStage3Screen(),
-        "isLocked": _isLocked('stage3'),
-      },
-      {
-        "label": "Stage 4",
-        "dest": const HindiClubStage4Screen(),
-        "isLocked": _isLocked('stage4'),
-      },
-      {
-        "label": "Stage 5",
-        "dest": const HindiClubStage5Screen(),
-        "isLocked": _isLocked('stage5'),
-      },
-      {
-        "label": "Stage 6",
-        "dest": const HindiClubStage6Screen(),
-        "isLocked": _isLocked('stage6'),
-      },
-      {
-        "label": "Stage 7",
-        "dest": const HindiClubStage7Screen(),
-        "isLocked": _isLocked('stage7'),
-      },
-    ];
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Column(
@@ -305,7 +259,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                     child: Text(
                       (authController.userData['name'] ?? 'L').isNotEmpty
                           ? (authController.userData['name'] ?? 'L')[0]
-                              .toUpperCase()
+                                .toUpperCase()
                           : 'L',
                       style: GoogleFonts.poppins(
                         color: goldenYellow,
@@ -361,73 +315,15 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   () => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Section Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Hindi Material Stages",
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            "${stagesData.length} Stages",
-                            style: GoogleFonts.poppins(
-                              color: goldenYellow,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Grid of 7 Stages
-                      GridView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: stagesData.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.15,
-                        ),
-                        itemBuilder: (context, index) {
-                          final stage = stagesData[index];
-                          final bool isLocked = _isLocked(
-                            'stage${stage["stageNum"]}',
-                          );
-                          return _buildModernStageCard(
-                            context: context,
-                            title: stage["title"],
-                            subtitle: stage["subtitle"],
-                            stageNum: stage["stageNum"],
-                            destination: stage["destination"],
-                            isLocked: isLocked,
-                            cardColor: cardColor,
-                            accentColor: deepOceanBlue,
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Online Classes & Club Container
+                      // 🚀 Interactive Online Classes at the Top
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
+                        margin: const EdgeInsets.only(bottom: 24),
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: tealMist.withOpacity(0.3),
-                          ),
+                          border: Border.all(color: tealMist.withOpacity(0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,56 +371,63 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                                 }).toList(),
                               ),
                             ),
-
-                            const SizedBox(height: 18),
-                            Divider(color: Colors.white.withOpacity(0.06)),
-                            const SizedBox(height: 14),
-
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: tealMist.withOpacity(0.18),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.groups_rounded,
-                                    color: goldenYellow,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  "Let's Speak in Club (Hindi)",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: clubData.map((item) {
-                                  final int index =
-                                      clubData.indexOf(item) + 1;
-                                  return _buildClubButton(
-                                    context,
-                                    item["label"],
-                                    item["dest"],
-                                    isLocked: _isLocked('stage$index'),
-                                    accentColor: tealMist,
-                                  );
-                                }).toList(),
-                              ),
-                            ),
                           ],
                         ),
+                      ),
+
+                      // Section Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Hindi Material Stages",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            "${stagesData.length} Stages",
+                            style: GoogleFonts.poppins(
+                              color: goldenYellow,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Grid of 7 Stages
+                      GridView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: stagesData.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1.15,
+                            ),
+                        itemBuilder: (context, index) {
+                          final stage = stagesData[index];
+                          final bool isLocked = _isLocked(
+                            'stage${stage["stageNum"]}',
+                          );
+                          return _buildModernStageCard(
+                            context: context,
+                            title: stage["title"],
+                            subtitle: stage["subtitle"],
+                            stageNum: stage["stageNum"],
+                            destination: stage["destination"],
+                            isLocked: isLocked,
+                            cardColor: cardColor,
+                            accentColor: deepOceanBlue,
+                          );
+                        },
                       ),
                       const SizedBox(height: 25),
                     ],
@@ -687,7 +590,9 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isLocked ? Colors.white12 : tealMist.withOpacity(0.6),
+                      color: isLocked
+                          ? Colors.white12
+                          : tealMist.withOpacity(0.6),
                       width: 1.5,
                     ),
                     color: isLocked
@@ -730,55 +635,6 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                 fontWeight: isLocked ? FontWeight.normal : FontWeight.w500,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Modern Club Button Widget
-  Widget _buildClubButton(
-    BuildContext context,
-    String label,
-    Widget destination, {
-    required bool isLocked,
-    required Color accentColor,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        if (isLocked) {
-          showAccessDeniedDialog("Admin approval required");
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(right: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isLocked ? Colors.white10 : accentColor.withOpacity(0.4),
-          ),
-          color: isLocked ? Colors.transparent : accentColor.withOpacity(0.12),
-        ),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: isLocked ? Colors.white30 : Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            if (isLocked) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.lock_rounded, color: Colors.amber, size: 12),
-            ],
           ],
         ),
       ),
