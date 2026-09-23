@@ -1,30 +1,85 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:get/get.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:lets_talk/Screens/app_colors.dart';
 
-// 🌐 Safe Global Overlay Controller with Direct Audio Control
+// =========================================================================
+// 🌐 INTERNET CONNECTION HELPER
+// =========================================================================
+Future<bool> _checkInternetConnection() async {
+  try {
+    final result = await InternetAddress.lookup('google.com');
+    if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+void _showNoInternetSnackbar() {
+  Get.snackbar(
+    "Connection Lost",
+    "Your internet is not working. Please check your connection.",
+    backgroundColor: AppColors.error,
+    colorText: Colors.white,
+    snackPosition: SnackPosition.BOTTOM,
+    margin: const EdgeInsets.all(16),
+  );
+}
+
+// =========================================================================
+// 🚀 HIGH-SCALE SINGLETON STREAM MANAGER (Eliminates 5-7s Delay)
+// =========================================================================
+class StreamManager {
+  static StreamVideo? _cachedClient;
+
+  static Future<StreamVideo> getClient({
+    required String userId,
+    required String userName,
+    required String token,
+  }) async {
+    if (_cachedClient != null) {
+      return _cachedClient!;
+    }
+    _cachedClient = StreamVideo(
+      'urzyyp7kctqv',
+      user: User.regular(userId: userId, name: userName),
+      userToken: token,
+    );
+    return _cachedClient!;
+  }
+}
+
+// =========================================================================
+// 🌐 SAFE GLOBAL OVERLAY CONTROLLER
+// =========================================================================
 class GlobalAudioOverlayController {
   static OverlayEntry? _overlayEntry;
   static Call? currentCall;
   static String? currentUserId;
   static String? currentClassName;
+  static LiveSessionWidget? activeWidgetRef;
 
   static void showOverlay(
     BuildContext context,
     Call call,
     String userId,
-    String className,
-  ) {
+    String className, {
+    LiveSessionWidget? widgetRef,
+  }) {
     if (_overlayEntry != null) return;
     currentCall = call;
     currentUserId = userId;
     currentClassName = className;
+    activeWidgetRef = widgetRef;
 
     final overlayState = Overlay.of(context);
     if (overlayState == null) return;
@@ -53,12 +108,18 @@ class FloatingAudioPiPWidget extends StatefulWidget {
 }
 
 class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
-  Offset _position = const Offset(20, 100);
+  Offset _position = const Offset(16, 110);
 
   @override
   Widget build(BuildContext context) {
     final call = GlobalAudioOverlayController.currentCall;
     final userId = GlobalAudioOverlayController.currentUserId;
+    final widgetRef = GlobalAudioOverlayController.activeWidgetRef;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color overlaySurface = isDark ? AppColors.darkSurface : Colors.white;
+    final Color overlayText = isDark ? AppColors.darkText : AppColors.text;
+    final Color accent = isDark ? AppColors.teal : AppColors.navy;
 
     if (call == null || userId == null) {
       return const SizedBox.shrink();
@@ -76,17 +137,21 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
         child: Material(
           color: Colors.transparent,
           child: Container(
-            width: 220,
-            padding: const EdgeInsets.all(12),
+            width: 236,
+            padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: const Color(0xff14141E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xff2E90FA), width: 1.5),
+              color: overlaySurface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: accent.withOpacity(isDark ? 0.55 : 0.22),
+                width: 1.2,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 15,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withOpacity(isDark ? 0.38 : 0.16),
+                  blurRadius: 24,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
@@ -133,47 +198,37 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
                             Text(
                               "LIVE CLASS",
                               style: GoogleFonts.poppins(
-                                color: const Color(0xff12B76A),
+                                color: AppColors.success,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                        Row(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                GlobalAudioOverlayController.removeOverlay();
-                                Get.to(
-                                  () => StudentAudioRoomScreen(
-                                    call: call,
-                                    widgetRef: null,
-                                    userId: userId,
-                                    initialMuted: isMuted,
-                                  ),
-                                );
-                              },
-                              child: const Icon(
-                                Icons.fullscreen_rounded,
-                                color: Colors.white70,
-                                size: 18,
+                        InkWell(
+                          onTap: () {
+                            GlobalAudioOverlayController.removeOverlay();
+                            Get.to(
+                              () => StudentAudioRoomScreen(
+                                call: call,
+                                widgetRef: widgetRef,
+                                userId: userId,
+                                initialMuted: isMuted,
                               ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: accent.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () async {
-                                WakelockPlus.disable();
-                                await call.leave();
-                                GlobalAudioOverlayController.removeOverlay();
-                              },
-                              child: const Icon(
-                                Icons.close_rounded,
-                                color: Colors.redAccent,
-                                size: 18,
-                              ),
+                            child: Icon(
+                              Icons.fullscreen_rounded,
+                              color: accent,
+                              size: 18,
                             ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
@@ -185,7 +240,7 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
                             ? "🗣️ ${speaker.name} is speaking"
                             : "Audio Connected",
                         style: GoogleFonts.poppins(
-                          color: Colors.white,
+                          color: overlayText,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -200,11 +255,7 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
                         ElevatedButton.icon(
                           onPressed: () async {
                             try {
-                              if (isMuted) {
-                                await call.setMicrophoneEnabled(enabled: true);
-                              } else {
-                                await call.setMicrophoneEnabled(enabled: false);
-                              }
+                              await call.setMicrophoneEnabled(enabled: isMuted);
                             } catch (e) {
                               debugPrint("PiP Audio Toggle Error: $e");
                             }
@@ -247,10 +298,13 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
   }
 }
 
+// =========================================================================
+// 🚀 LIVE SESSION ENTRY WIDGET
+// =========================================================================
 class LiveSessionWidget extends StatefulWidget {
-  final String language; // "English" or "Hindi"
-  final String stage; // "stage1" ... "stage7"
-  final String type; // "class" or "club"
+  final String language;
+  final String stage;
+  final String type;
 
   const LiveSessionWidget({
     super.key,
@@ -266,16 +320,17 @@ class LiveSessionWidget extends StatefulWidget {
 class _LiveSessionWidgetState extends State<LiveSessionWidget>
     with WidgetsBindingObserver {
   final AuthController authController = Get.find<AuthController>();
-
   bool isLoading = false;
-  static Call? activeCall;
 
-  final Color deepOceanBlue = const Color(0xff065381);
-  final Color pureWhite = const Color(0xffFFFFFF);
-  final Color textDark = const Color(0xff0F172A);
-  final Color textMuted = const Color(0xff64748B);
-  final Color cardColor = const Color(0xff14141E);
-  final Color accentBlue = const Color(0xff2E90FA);
+  Color get deepOceanBlue => Get.isDarkMode ? AppColors.teal : AppColors.navy;
+  Color get pureWhite =>
+      Get.isDarkMode ? AppColors.darkSurface : AppColors.surface;
+  Color get textDark => Get.isDarkMode ? AppColors.darkText : AppColors.text;
+  Color get textMuted =>
+      Get.isDarkMode ? AppColors.darkTextSecondary : AppColors.textSecondary;
+  Color get cardColor =>
+      Get.isDarkMode ? AppColors.darkSurface : AppColors.surface;
+  Color get accentBlue => Get.isDarkMode ? AppColors.teal : AppColors.navy;
 
   @override
   void initState() {
@@ -289,28 +344,16 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
     super.dispose();
   }
 
-  String _calculateCurrentBatch() {
-    final now = DateTime.now();
-    final int currentMinutes = now.hour * 60 + now.minute;
-    if (currentMinutes >= 330 && currentMinutes < 420)
-      return "5:30 AM - 7:00 AM";
-    if (currentMinutes >= 420 && currentMinutes < 510)
-      return "7:00 AM - 8:30 AM";
-    if (currentMinutes >= 540 && currentMinutes < 630)
-      return "9:00 AM - 10:30 AM";
-    if (currentMinutes >= 630 && currentMinutes < 720)
-      return "10:30 AM - 12:00 PM";
-    if (currentMinutes >= 930 && currentMinutes < 1020)
-      return "3:30 PM - 5:00 PM";
-    if (currentMinutes >= 1020 && currentMinutes < 1110)
-      return "5:00 PM - 6:30 PM";
-    if (currentMinutes >= 1110 && currentMinutes < 1400)
-      return "6:30 PM - 8:00 PM";
-    return "Custom Session";
-  }
-
   void _showPreJoinPermissionDialog() {
     bool joinMuted = true;
+    final bool isDark = Get.isDarkMode;
+    final Color dialogText = isDark ? AppColors.darkText : AppColors.text;
+    final Color dialogSecondary = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.textSecondary;
+    final Color dialogSurface2 = isDark
+        ? AppColors.darkSurface2
+        : AppColors.surfaceSoft;
 
     Get.dialog(
       Dialog(
@@ -347,7 +390,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                             Text(
                               "Join Audio Session",
                               style: GoogleFonts.poppins(
-                                color: Colors.white,
+                                color: dialogText,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
@@ -356,7 +399,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                             Text(
                               "Configure your entry preference",
                               style: GoogleFonts.poppins(
-                                color: Colors.white54,
+                                color: dialogSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -367,9 +410,9 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    "You can join muted and use the floating mini-player to browse home notes while listening.",
+                    "Join this live session securely with optimized performance.",
                     style: GoogleFonts.poppins(
-                      color: Colors.white70,
+                      color: dialogSecondary,
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -381,9 +424,12 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xff1E1E2D),
+                      color: dialogSurface2,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      border: Border.all(
+                        color: (isDark ? Colors.white : AppColors.navy)
+                            .withOpacity(0.08),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -396,7 +442,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                                   Text(
                                     "Join Muted",
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white,
+                                      color: dialogText,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -426,7 +472,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                               Text(
                                 "Unmute anytime to speak.",
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white54,
+                                  color: dialogSecondary,
                                   fontSize: 11,
                                 ),
                               ),
@@ -452,7 +498,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                           child: Text(
                             "Cancel",
                             style: GoogleFonts.poppins(
-                              color: Colors.white60,
+                              color: dialogSecondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -493,6 +539,12 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
   }
 
   Future<void> _joinAudioClassStream({required bool initialMuted}) async {
+    final bool hasInternet = await _checkInternetConnection();
+    if (!hasInternet) {
+      _showNoInternetSnackbar();
+      return;
+    }
+
     setState(() => isLoading = true);
     final user = authController.userData;
     final userId = (user['id'] ?? user['_id']).toString();
@@ -500,8 +552,6 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
     final String section = (user['onlineSection'] ?? user['section'] ?? 'A')
         .toString()
         .toLowerCase();
-    final currentBatch = _calculateCurrentBatch();
-    final now = DateTime.now();
 
     try {
       final tokenRes = await http.post(
@@ -514,11 +564,10 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
       final tokenData = jsonDecode(tokenRes.body);
       final token = tokenData['token'];
 
-      await StreamVideo.reset(disconnect: true);
-      final client = StreamVideo(
-        'urzyyp7kctqv',
-        user: User.regular(userId: userId, name: userName),
-        userToken: token,
+      final client = await StreamManager.getClient(
+        userId: userId,
+        userName: userName,
+        token: token,
       );
 
       final callId = widget.language.toLowerCase() == "english"
@@ -530,10 +579,13 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
         id: callId,
       );
 
+      await call.getOrCreate();
       await call.join();
+
+      // 🚀 Enforce the mute state immediately upon joining
       await call.setMicrophoneEnabled(enabled: !initialMuted);
 
-      activeCall = call;
+      GlobalAudioOverlayController.removeOverlay();
 
       Get.to(
         () => StudentAudioRoomScreen(
@@ -557,8 +609,13 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
 
   @override
   Widget build(BuildContext context) {
+    final Call? activeGlobalCall = GlobalAudioOverlayController.currentCall;
+    final bool isAlreadyInCall = activeGlobalCall != null;
+
     return Scaffold(
-      backgroundColor: pureWhite,
+      backgroundColor: Get.isDarkMode
+          ? AppColors.darkBackground
+          : AppColors.background,
       appBar: AppBar(
         backgroundColor: pureWhite,
         elevation: 0,
@@ -594,14 +651,18 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                         color: deepOceanBlue.withOpacity(0.08),
                       ),
                       child: Icon(
-                        Icons.headset_mic_rounded,
+                        isAlreadyInCall
+                            ? Icons.headset_rounded
+                            : Icons.headset_mic_rounded,
                         size: 56,
                         color: deepOceanBlue,
                       ),
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      "Live Audio Classroom",
+                      isAlreadyInCall
+                          ? "Active Class Session"
+                          : "Live Audio Classroom",
                       style: GoogleFonts.poppins(
                         color: textDark,
                         fontSize: 20,
@@ -610,7 +671,9 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Tap below to connect directly to your instructor's live voice session securely.",
+                      isAlreadyInCall
+                          ? "You are currently connected to an active audio session."
+                          : "Tap below to connect securely to your ${widget.language} class (${widget.stage.toUpperCase()}).",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                         color: textMuted,
@@ -625,23 +688,42 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                       child: ElevatedButton.icon(
                         onPressed: isLoading
                             ? null
-                            : _showPreJoinPermissionDialog,
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.volume_up_rounded,
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                            : () async {
+                                final bool hasInternet =
+                                    await _checkInternetConnection();
+                                if (!hasInternet) {
+                                  _showNoInternetSnackbar();
+                                  return;
+                                }
+
+                                if (isAlreadyInCall) {
+                                  GlobalAudioOverlayController.removeOverlay();
+                                  final user = authController.userData;
+                                  final userId = (user['id'] ?? user['_id'])
+                                      .toString();
+                                  Get.to(
+                                    () => StudentAudioRoomScreen(
+                                      call: activeGlobalCall,
+                                      widgetRef: widget,
+                                      userId: userId,
+                                      initialMuted: false,
+                                    ),
+                                  );
+                                } else {
+                                  _showPreJoinPermissionDialog();
+                                }
+                              },
+                        icon: Icon(
+                          isAlreadyInCall
+                              ? Icons.arrow_forward_rounded
+                              : Icons.volume_up_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         label: Text(
-                          isLoading ? "CONNECTING..." : "JOIN LIVE AUDIO CLASS",
+                          isAlreadyInCall
+                              ? "RETURN TO LIVE CLASS"
+                              : "JOIN LIVE AUDIO CLASS",
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -649,7 +731,9 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: deepOceanBlue,
+                          backgroundColor: isAlreadyInCall
+                              ? const Color(0xff12B76A)
+                              : deepOceanBlue,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -664,6 +748,9 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
   }
 }
 
+// =========================================================================
+// 🌐 STUDENT AUDIO ROOM WITH STRICT MUTE ENFORCEMENT & GUARDS
+// =========================================================================
 class StudentAudioRoomScreen extends StatefulWidget {
   final Call call;
   final LiveSessionWidget? widgetRef;
@@ -688,10 +775,20 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
   bool _isAppSwitchWarningShown = false;
   String? _attendanceId;
   bool _isAttendanceStarted = false;
+  bool _isPoorConnection = false;
+  Timer? _muteGuardTimer;
 
-  final Color backgroundColor = const Color(0xff09090C);
-  final Color cardColor = const Color(0xff14141E);
-  final Color accentBlue = const Color(0xff2E90FA);
+  Color get backgroundColor =>
+      Get.isDarkMode ? AppColors.darkBackground : AppColors.background;
+  Color get cardColor =>
+      Get.isDarkMode ? AppColors.darkSurface : AppColors.surface;
+  Color get accentBlue =>
+      Get.isDarkMode ? AppColors.teal : const Color.fromARGB(255, 0, 0, 0);
+  Color get roomText => Get.isDarkMode ? AppColors.darkText : AppColors.text;
+  Color get roomSecondary =>
+      Get.isDarkMode ? AppColors.darkTextSecondary : AppColors.textSecondary;
+  Color get roomBorder =>
+      Get.isDarkMode ? AppColors.darkBorder : AppColors.border;
 
   @override
   void initState() {
@@ -699,22 +796,30 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
 
-    // 🚀 Record online class join for attendance tracking
     _recordOnlineJoin();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        await Future.delayed(const Duration(milliseconds: 300));
-        await widget.call.setMicrophoneEnabled(enabled: !widget.initialMuted);
+    // 🚀 FIXED: Continuously lock the mic state during the first few seconds if joined muted
+    // to prevent server-side/SDK handshakes from overriding the mute choice.
+    if (widget.initialMuted) {
+      int checks = 0;
+      _muteGuardTimer = Timer.periodic(const Duration(milliseconds: 400), (
+        timer,
+      ) async {
+        checks++;
+        try {
+          final localPart = widget.call.state.value.callParticipants
+              .firstWhereOrNull((p) => p.userId == widget.userId);
 
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted && widget.initialMuted) {
-          await widget.call.setMicrophoneEnabled(enabled: false);
+          if (localPart != null && localPart.isAudioEnabled) {
+            await widget.call.setMicrophoneEnabled(enabled: false);
+          }
+        } catch (_) {}
+
+        if (checks >= 8 || !mounted) {
+          timer.cancel();
         }
-      } catch (e) {
-        debugPrint("Initial Mute Enforcement Error: $e");
-      }
-    });
+      });
+    }
 
     widget.call.state.asStream().listen((callState) {
       final participants = callState.callParticipants;
@@ -734,15 +839,28 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
         }
       }
     });
+
+    Timer.periodic(const Duration(seconds: 4), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final connected = await _checkInternetConnection();
+      if (mounted) {
+        setState(() {
+          _isPoorConnection = !connected;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _muteGuardTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // 🚀 Record Join API call
   Future<void> _recordOnlineJoin() async {
     if (_isAttendanceStarted) return;
     try {
@@ -753,9 +871,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           "userId": widget.userId,
           "language": widget.widgetRef?.language ?? "English",
           "stage": widget.widgetRef?.stage.toUpperCase() ?? "STAGE 1",
-          "batchTime": widget.widgetRef != null
-              ? _calculateCurrentBatchStatic()
-              : "Custom Session",
+          "batchTime": "Live Session",
           "joinTime": DateTime.now().toIso8601String(),
         }),
       );
@@ -769,7 +885,6 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     }
   }
 
-  // 🚀 Record Leave API call to compute total accumulated time
   Future<void> _recordOnlineLeave() async {
     if (_attendanceId == null) return;
     try {
@@ -785,26 +900,6 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     } catch (e) {
       debugPrint("Record Leave Error: $e");
     }
-  }
-
-  String _calculateCurrentBatchStatic() {
-    final now = DateTime.now();
-    final int currentMinutes = now.hour * 60 + now.minute;
-    if (currentMinutes >= 330 && currentMinutes < 420)
-      return "5:30 AM - 7:00 AM";
-    if (currentMinutes >= 420 && currentMinutes < 510)
-      return "7:00 AM - 8:30 AM";
-    if (currentMinutes >= 540 && currentMinutes < 630)
-      return "9:00 AM - 10:30 AM";
-    if (currentMinutes >= 630 && currentMinutes < 720)
-      return "10:30 AM - 12:00 PM";
-    if (currentMinutes >= 930 && currentMinutes < 1020)
-      return "3:30 PM - 5:00 PM";
-    if (currentMinutes >= 1020 && currentMinutes < 1110)
-      return "5:00 PM - 6:30 PM";
-    if (currentMinutes >= 1110 && currentMinutes < 1400)
-      return "6:30 PM - 8:00 PM";
-    return "Custom Session";
   }
 
   @override
@@ -826,15 +921,15 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
             title: Text(
               "⚠️ Warning: Leaving Class",
               style: GoogleFonts.poppins(
-                color: Colors.white,
+                color: roomText,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
             ),
             content: Text(
-              "Switching away or opening another app (like Instagram) will logout or disrupt your live class session. Do you want to exit the class?",
+              "Switching away or opening another app will disrupt your live class session. Do you want to exit the class?",
               style: GoogleFonts.poppins(
-                color: Colors.white70,
+                color: roomSecondary,
                 fontSize: 13,
                 height: 1.4,
               ),
@@ -885,22 +980,17 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
   }
 
   Future<void> _toggleMic(bool isCurrentlyMuted) async {
+    final bool hasInternet = await _checkInternetConnection();
+    if (!hasInternet) {
+      _showNoInternetSnackbar();
+      return;
+    }
+
     setState(() => isToggling = true);
     try {
-      if (isCurrentlyMuted) {
-        await widget.call.setMicrophoneEnabled(enabled: true);
-      } else {
-        await widget.call.setMicrophoneEnabled(enabled: false);
-      }
-      await Future.delayed(const Duration(milliseconds: 300));
+      await widget.call.setMicrophoneEnabled(enabled: isCurrentlyMuted);
     } catch (e) {
       debugPrint("Mic Toggle Error: $e");
-      Get.snackbar(
-        "Audio Error",
-        "Could not change microphone state.",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
     } finally {
       if (mounted) setState(() => isToggling = false);
     }
@@ -914,14 +1004,14 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
         title: Text(
           "Leave Classroom",
           style: GoogleFonts.poppins(
-            color: Colors.white,
+            color: roomText,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
         content: Text(
           "Are you sure you want to exit this live audio session?",
-          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+          style: GoogleFonts.poppins(color: roomSecondary, fontSize: 13),
         ),
         actions: [
           TextButton(
@@ -929,7 +1019,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
             child: Text(
               "Cancel",
               style: GoogleFonts.poppins(
-                color: Colors.white54,
+                color: roomSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -964,6 +1054,10 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
 
   @override
   Widget build(BuildContext context) {
+    final sessionTitle = widget.widgetRef != null
+        ? "${widget.widgetRef!.language} • ${widget.widgetRef!.stage.toUpperCase()}"
+        : "Classroom Session";
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -974,6 +1068,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           widget.call,
           widget.userId,
           "Live Class",
+          widgetRef: widget.widgetRef,
         );
       },
       child: Scaffold(
@@ -982,9 +1077,9 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           backgroundColor: cardColor,
           elevation: 0,
           title: Text(
-            "Classroom Session",
+            sessionTitle,
             style: GoogleFonts.poppins(
-              color: Colors.white,
+              color: roomText,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -992,10 +1087,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           automaticallyImplyLeading: false,
           actions: [
             IconButton(
-              icon: const Icon(
-                Icons.picture_in_picture_alt_rounded,
-                color: Colors.white,
-              ),
+              icon: Icon(Icons.picture_in_picture_alt_rounded, color: roomText),
               tooltip: "Minimize (Read Notes)",
               onPressed: () {
                 Get.until((route) => route.isFirst);
@@ -1004,6 +1096,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                   widget.call,
                   widget.userId,
                   "Live Class",
+                  widgetRef: widget.widgetRef,
                 );
               },
             ),
@@ -1031,6 +1124,35 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
 
             return Column(
               children: [
+                if (_isPoorConnection)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.orange.shade800,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.wifi_off_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Your internet is unstable or not working properly.",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -1041,9 +1163,9 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Participants (${participants.length})",
+                        "Participants Connected (${participants.length})",
                         style: GoogleFonts.poppins(
-                          color: Colors.white70,
+                          color: roomSecondary,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -1054,7 +1176,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xff12B76A).withOpacity(0.18),
+                          color: AppColors.success.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Text(
@@ -1085,7 +1207,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                         decoration: BoxDecoration(
                           color: cardColor,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white10),
+                          border: Border.all(color: roomBorder),
                         ),
                         child: Row(
                           children: [
@@ -1113,7 +1235,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                                         child: Text(
                                           p.name,
                                           style: GoogleFonts.poppins(
-                                            color: Colors.white,
+                                            color: roomText,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,
                                           ),
@@ -1138,7 +1260,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                                           child: const Text(
                                             "TALKING",
                                             style: TextStyle(
-                                              color: Colors.greenAccent,
+                                              color: AppColors.success,
                                               fontSize: 8,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -1152,7 +1274,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                                         ? "INSTRUCTOR / ADMIN"
                                         : "STUDENT",
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white54,
+                                      color: roomSecondary,
                                       fontSize: 10,
                                     ),
                                   ),
@@ -1172,8 +1294,8 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                                     ? Icons.mic_off_rounded
                                     : Icons.mic_rounded,
                                 color: participantMuted
-                                    ? Colors.redAccent
-                                    : Colors.greenAccent,
+                                    ? AppColors.error
+                                    : AppColors.success,
                                 size: 18,
                               ),
                             ),
@@ -1187,9 +1309,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: cardColor,
-                    border: const Border(
-                      top: BorderSide(color: Colors.white10),
-                    ),
+                    border: Border(top: BorderSide(color: roomBorder)),
                   ),
                   child: Row(
                     children: [

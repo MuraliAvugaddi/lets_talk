@@ -6,11 +6,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:lets_talk/Screens/app_colors.dart';
 
 // --- UPDATED INSTITUTE LOCATION (Visakhapatnam Rama Talkies Road) ---
 const double instituteLat = 17.729417;
 const double instituteLng = 83.312231;
-const double allowedRadius = 40.0; // Optimized radius: covers classroom & handles indoor GPS drift
+
+const double allowedRadius =
+    40.0; // Optimized radius: covers classroom & handles indoor GPS drift
 
 class StageAttendanceWidget extends StatefulWidget {
   final String stageName;
@@ -29,11 +32,38 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
   String? currentBatchSlot;
   String attendanceStatusText = "Not Marked";
 
-  // --- BRAND COLORS ---
-  final Color deepOceanBlue = const Color(0xff065381);
-  final Color tealMist = const Color(0xff508F97);
-  final Color goldenYellow = const Color(0xffF2C94C);
-  final Color darkCard = const Color(0xff14141E);
+  // --- SHARED APP BRAND COLORS ---
+  Color _deepOceanBlue(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.teal : AppColors.navy;
+  }
+
+  Color _tealMist(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.teal : AppColors.teal;
+  }
+
+  Color _goldenYellow(BuildContext context) => AppColors.yellow;
+
+  Color _cardColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.darkSurface : AppColors.surface;
+  }
+
+  Color _primaryText(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.darkText : AppColors.text;
+  }
+
+  Color _secondaryText(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+  }
+
+  Color _borderColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return isDark ? AppColors.darkBorder : AppColors.border;
+  }
 
   @override
   void initState() {
@@ -113,13 +143,20 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           titleStyle: GoogleFonts.poppins(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: _primaryText(context),
           ),
-          middleText: "Your device GPS is turned off. Please turn it on to check in.",
-          middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-          backgroundColor: darkCard,
+          middleText:
+              "Your device GPS is turned off. Please turn it on to check in.",
+          middleTextStyle: GoogleFonts.poppins(
+            color: _secondaryText(context),
+            fontSize: 13,
+          ),
+          backgroundColor: _cardColor(context),
           radius: 16,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 10,
+          ),
           confirm: SizedBox(
             height: 40,
             child: ElevatedButton(
@@ -128,12 +165,17 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                 await Geolocator.openLocationSettings();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: deepOceanBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: _deepOceanBlue(context),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text(
                 "Open Settings",
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -141,7 +183,10 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
             height: 40,
             child: TextButton(
               onPressed: () => Get.back(),
-              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.white60)),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.poppins(color: _secondaryText(context)),
+              ),
             ),
           ),
         );
@@ -156,7 +201,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           Get.snackbar(
             "Permission Denied",
             "Location permission is required to check in.",
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.error,
             colorText: Colors.white,
           );
           return;
@@ -171,14 +216,20 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           titleStyle: GoogleFonts.poppins(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: _primaryText(context),
           ),
           middleText:
               "Location permission is permanently blocked. Please allow location in App Settings.",
-          middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-          backgroundColor: darkCard,
+          middleTextStyle: GoogleFonts.poppins(
+            color: _secondaryText(context),
+            fontSize: 13,
+          ),
+          backgroundColor: _cardColor(context),
           radius: 16,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 10,
+          ),
           confirm: SizedBox(
             height: 40,
             child: ElevatedButton(
@@ -187,12 +238,17 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                 await Geolocator.openAppSettings();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: deepOceanBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: _deepOceanBlue(context),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: Text(
                 "Open Settings",
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -200,7 +256,10 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
             height: 40,
             child: TextButton(
               onPressed: () => Get.back(),
-              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.white60)),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.poppins(color: _secondaryText(context)),
+              ),
             ),
           ),
         );
@@ -254,7 +313,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         Get.snackbar(
           "Checked In!",
           "Marked $attendanceStatusText for ${widget.stageName}",
-          backgroundColor: tealMist,
+          backgroundColor: _tealMist(context),
           colorText: Colors.white,
         );
       } else {
@@ -262,15 +321,15 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         Get.snackbar(
           "Notice",
           body['message'] ?? "Attendance already marked.",
-          backgroundColor: goldenYellow.withOpacity(0.9),
-          colorText: Colors.black,
+          backgroundColor: AppColors.yellow,
+          colorText: AppColors.text,
         );
       }
     } catch (e) {
       Get.snackbar(
         "Error",
         "Check-in failed: $e",
-        backgroundColor: Colors.redAccent,
+        backgroundColor: AppColors.error,
         colorText: Colors.white,
       );
     } finally {
@@ -281,7 +340,9 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final String userMode = (authController.userData['mode'] ?? "online")
+      // 🚀 Explicitly reference authController.userData to ensure Obx tracks changes when admin updates profile/mode
+      final userData = authController.userData;
+      final String userMode = (userData['mode'] ?? "online")
           .toString()
           .toLowerCase();
 
@@ -297,13 +358,19 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: tealMist.withOpacity(0.12),
+            color: _tealMist(context).withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: tealMist.withOpacity(0.4)),
+            border: Border.all(
+              color: _tealMist(context).withValues(alpha: 0.35),
+            ),
           ),
           child: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: goldenYellow, size: 28),
+              Icon(
+                Icons.check_circle_rounded,
+                color: _goldenYellow(context),
+                size: 28,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -312,7 +379,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                     Text(
                       attendanceStatusText,
                       style: GoogleFonts.poppins(
-                        color: goldenYellow,
+                        color: _goldenYellow(context),
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -320,7 +387,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                     Text(
                       "${widget.stageName} • ${currentBatchSlot ?? 'Active Session'}",
                       style: GoogleFonts.poppins(
-                        color: Colors.white70,
+                        color: _secondaryText(context),
                         fontSize: 12,
                       ),
                     ),
@@ -339,9 +406,9 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: darkCard,
+            color: _cardColor(context),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: tealMist.withOpacity(0.35)),
+            border: Border.all(color: _borderColor(context)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +416,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
               Text(
                 "Mark Classroom Attendance",
                 style: GoogleFonts.poppins(
-                  color: Colors.white,
+                  color: _primaryText(context),
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -357,7 +424,10 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
               const SizedBox(height: 2),
               Text(
                 "Current Batch: $currentBatchSlot",
-                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                style: GoogleFonts.poppins(
+                  color: _secondaryText(context),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 14),
               SizedBox(
@@ -371,13 +441,13 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: goldenYellow,
+                            color: _goldenYellow(context),
                           ),
                         )
                       : Icon(
                           Icons.location_on_rounded,
                           size: 18,
-                          color: goldenYellow,
+                          color: _goldenYellow(context),
                         ),
                   label: Text(
                     isAttendanceLoading
@@ -390,7 +460,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: deepOceanBlue,
+                    backgroundColor: _deepOceanBlue(context),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -409,13 +479,16 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: darkCard,
+          color: _cardColor(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: _borderColor(context)),
         ),
         child: Text(
           "Class check-in will open when your scheduled batch starts.",
-          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+          style: GoogleFonts.poppins(
+            color: _secondaryText(context),
+            fontSize: 12,
+          ),
           textAlign: TextAlign.center,
         ),
       );

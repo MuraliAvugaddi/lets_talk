@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:lets_talk/Screens/auth/welcome_screen.dart';
 
@@ -17,13 +19,8 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  final box = GetStorage();
 
-  // --- BRAND COLORS ---
-  final Color deepOceanBlue = const Color(0xff065381);
-  final Color tealMist = const Color(0xff508F97);
-  final Color goldenYellow = const Color(0xffF2C94C);
-  final Color darkCanvas = const Color(0xff0A0A0E);
+  final box = GetStorage();
 
   @override
   void initState() {
@@ -31,13 +28,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 900),
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
 
     _controller.forward();
 
@@ -47,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _checkLoginAndNavigate() {
-    bool hasToken = box.hasData('token');
+    final bool hasToken = box.hasData('token');
 
     if (hasToken) {
       Get.offAll(() => const MainNavigationScreen());
@@ -64,92 +61,51 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: darkCanvas,
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              deepOceanBlue.withOpacity(0.35),
-              darkCanvas,
-            ],
-          ),
+    // 🚀 Force light theme colors regardless of system or app dark mode
+    const Color background = Colors.white;
+    const Color titleColor = Color(0xFF173A52);
+
+    return Theme(
+      data: ThemeData.light(), // Forces light mode theme data on children
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: background,
+          statusBarIconBrightness:
+              Brightness.dark, // Dark icons for light background
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: background,
+          systemNavigationBarIconBrightness: Brightness.dark,
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // --- LOGO CONTAINER WITH AMBIENT GLOW ---
-                  Container(
-                    height: 130,
-                    width: 130,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xff14141E),
-                      border: Border.all(color: goldenYellow, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: deepOceanBlue.withOpacity(0.5),
-                          blurRadius: 30,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(22),
-                    child: Image.asset(
-                      "assets/images/logo4x.png",
+        child: Scaffold(
+          backgroundColor: background,
+          body: SafeArea(
+            child: Center(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      "assets/images/let's speak.png",
+                      width: 170,
+                      height: 170,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.school_rounded,
-                        size: 54,
-                        color: goldenYellow,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Text(
+                      "Let's Speak With Surendra",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: titleColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.1,
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // --- APP TITLE WITH CLEAN ALIGNMENT ---
-                  Text(
-                    "Let's Speak With Surendra",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                      height: 1.3,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // --- SUBTITLE ---
-                  Text(
-                    "Master English & Hindi",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: tealMist,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  CircularProgressIndicator(
-                    color: goldenYellow,
-                    strokeWidth: 3,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

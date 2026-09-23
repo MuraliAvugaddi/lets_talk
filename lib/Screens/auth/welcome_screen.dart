@@ -1,209 +1,374 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:lets_talk/Screens/auth/signin_screen.dart';
 import 'signup_screen1.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
+  static const Color navy = Color(0xFF155A88);
+  static const Color blue = Color(0xFF2C6F9F);
+  static const Color teal = Color(0xFF28C2C2);
+  static const Color yellow = Color(0xFFF7DF55);
+  static const Color periwinkle = Color(0xFF7CA4D8);
+
+  static const Color lightBackground = Color(0xFFF5FAFD);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightBorder = Color(0xFFDCEAF2);
+  static const Color lightText = Color(0xFF173A52);
+  static const Color lightSecondary = Color(0xFF6B8292);
+
+  static const Color darkBackground = Color(0xFF08141D);
+  static const Color darkSurface = Color(0xFF102330);
+  static const Color darkBorder = Color(0xFF24465D);
+  static const Color darkText = Color(0xFFF5FAFD);
+  static const Color darkSecondary = Color(0xFFAEC1CE);
+
   @override
   Widget build(BuildContext context) {
-    // --- BRAND PALETTE ---
-    final Color deepOceanBlue = const Color(0xff065381);
-    final Color tealMist = const Color(0xff508F97);
-    final Color goldenYellow = const Color(0xffF2C94C);
-    final Color darkCanvas = const Color(0xff0A0A0E);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color background = isDark ? darkBackground : lightBackground;
+    final Color surface = isDark ? darkSurface : lightSurface;
+    final Color border = isDark ? darkBorder : lightBorder;
+    final Color text = isDark ? darkText : lightText;
+    final Color secondary = isDark ? darkSecondary : lightSecondary;
 
     return Scaffold(
-      backgroundColor: darkCanvas,
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              deepOceanBlue.withOpacity(0.35),
-              darkCanvas,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 12),
+      backgroundColor: background,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool compact = constraints.maxHeight < 700;
+            final double horizontalPadding = constraints.maxWidth < 360
+                ? 18
+                : 24;
+            final double logoSize = constraints.maxWidth < 360 ? 112 : 128;
 
-                // 1. APP / LOGO BADGE
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: tealMist.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: tealMist.withOpacity(0.35)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome_rounded, size: 14, color: goldenYellow),
-                      const SizedBox(width: 6),
-                      Text(
-                        "Language Learning Platform",
-                        style: GoogleFonts.poppins(
-                          color: goldenYellow,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ],
-                  ),
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                18,
+                horizontalPadding,
+                24,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 42,
                 ),
-                const SizedBox(height: 16),
-
-                // 2. HEADLINE & SUBTITLE
-                Text(
-                  "Welcome Back",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                  child: Text(
-                    "Start your journey to speak English and Hindi with confidence.",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // 3. LOGO IMAGE WITH SUBTLE AMBIENT GLOW
-                Stack(
-                  alignment: Alignment.center,
+                child: Column(
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: navy,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(
+                            Icons.record_voice_over_rounded,
+                            color: yellow,
+                            size: 17,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Text(
+                          "LET'S SPEAK",
+                          style: GoogleFonts.poppins(
+                            color: text,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: compact ? 28 : 42),
+
                     Container(
-                      width: 220,
-                      height: 220,
+                      width: logoSize,
+                      height: logoSize,
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        color: surface,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(color: border),
                         boxShadow: [
                           BoxShadow(
-                            color: deepOceanBlue.withOpacity(0.4),
-                            blurRadius: 40,
-                            spreadRadius: 10,
+                            color: navy.withOpacity(isDark ? 0.18 : 0.09),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(23),
+                        child: Image.asset(
+                          "assets/images/let's speak.png",
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: navy,
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              child: const Icon(
+                                Icons.record_voice_over_rounded,
+                                color: yellow,
+                                size: 48,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: compact ? 22 : 28),
+
+                    Text(
+                      'Speak with confidence.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        color: text,
+                        fontSize: compact ? 27 : 30,
+                        fontWeight: FontWeight.w700,
+                        height: 1.12,
+                        letterSpacing: -0.7,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Learn ',
+                            style: GoogleFonts.poppins(
+                              color: secondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'English',
+                            style: GoogleFonts.poppins(
+                              color: navy,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' & ',
+                            style: GoogleFonts.poppins(
+                              color: secondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'Hindi',
+                            style: GoogleFonts.poppins(
+                              color: teal,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' with ease.',
+                            style: GoogleFonts.poppins(
+                              color: secondary,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Image.asset(
-                      "assets/images/logo4x.png",
-                      height: 220,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.school_rounded,
-                        size: 110,
-                        color: goldenYellow,
+
+                    SizedBox(height: compact ? 24 : 30),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 13,
                       ),
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: border),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _benefit(
+                              icon: Icons.menu_book_rounded,
+                              title: 'Learn',
+                              color: navy,
+                              text: text,
+                            ),
+                          ),
+                          _divider(border),
+                          Expanded(
+                            child: _benefit(
+                              icon: Icons.mic_none_rounded,
+                              title: 'Speak',
+                              color: teal,
+                              text: text,
+                            ),
+                          ),
+                          _divider(border),
+                          Expanded(
+                            child: _benefit(
+                              icon: Icons.trending_up_rounded,
+                              title: 'Improve',
+                              color: periwinkle,
+                              text: text,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: compact ? 28 : 44),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.to(() => const LoginScreen());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: navy,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Sign In',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.arrow_forward_rounded, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Get.to(() => const SignupStep1());
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: surface,
+                          foregroundColor: navy,
+                          elevation: 0,
+                          side: BorderSide(color: border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        child: Text(
+                          'Create New Account',
+                          style: GoogleFonts.poppins(
+                            color: navy,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _dot(teal),
+                        const SizedBox(width: 7),
+                        Text(
+                          'Learn • Speak • Grow',
+                          style: GoogleFonts.poppins(
+                            color: secondary,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        _dot(yellow),
+                      ],
                     ),
                   ],
                 ),
-
-                const Spacer(),
-
-                // 4. ACTION BUTTONS
-                _buildButton(
-                  text: "Sign In",
-                  bg: deepOceanBlue,
-                  textColor: Colors.white,
-                  borderColor: tealMist.withOpacity(0.5),
-                  onTap: () => Get.to(() => const LoginScreen()),
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildButton(
-                  text: "Create Account",
-                  bg: const Color(0xff14141E),
-                  textColor: goldenYellow,
-                  borderColor: goldenYellow.withOpacity(0.4),
-                  isOutlined: true,
-                  onTap: () => Get.to(() => const SignupStep1()),
-                ),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildButton({
-    required String text,
-    required Color bg,
-    required Color textColor,
-    required Color borderColor,
-    required VoidCallback onTap,
-    bool isOutlined = false,
+  Widget _benefit({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required Color text,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: isOutlined
-          ? OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: bg,
-                side: BorderSide(color: borderColor, width: 1.2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                text,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            )
-          : ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: bg,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: borderColor, width: 1),
-                ),
-              ),
-              child: Text(
-                text,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            color: text,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _divider(Color color) {
+    return Container(width: 1, height: 38, color: color);
+  }
+
+  Widget _dot(Color color) {
+    return Container(
+      width: 5,
+      height: 5,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

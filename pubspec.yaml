@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.0.3+5
+version: 2.0.3+8
 
 environment:
   sdk: ^3.10.1
@@ -57,6 +57,7 @@ dependencies:
   in_app_update: ^4.2.2
   stream_video_flutter: ^1.5.0
   wakelock_plus: ^1.2.8
+  internet_connection_checker_plus: ^3.1.2
 
 dev_dependencies:
   flutter_test:
@@ -83,6 +84,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/images/Frame icon.png
+    - assets/images/let's speak.png
+    - assets/images/logo4x.png
     - assets/images/paymentqrcode.png
     - assets/images/satge1/Day-2_English_ST-1_(Past Be).pdf
     - assets/images/satge1/Day-3_English_ST-1 (Past Be).pdf
@@ -197,6 +201,137 @@ flutter:
     - assets/images/stage4/Day-26_ST-3_Eng (🔴Practice on the whole Past Perfect tense).pdf
     - assets/images/stage4/Day-27_ST-3_Eng (Future Perfect BE & HAVE form).pdf
     - assets/images/stage4/Day-28_ST-3_Eng (Future Perfect A.V & P.V).pdf
+#   - Hindi material
+#   - Hindi Stage 1
+    - assets/images/Hindi/stagehindiStage1/Day-2_Foundation_Hin (+Sta Past BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-3_Foundation_Hin (- Sta Past BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-4_Foundation_Hin (+_- Y_N Past BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-5_Foundation_Hin (+_- W.H Past BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-6_Foundation_Hin (+Sta Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-7_Foundation_Hin (-Sta Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-8_Foundation_Hin (+Y_N Que Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-9_Foundation_Hin (-Y_N Que Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-10_Foundation_Hin (+W.H Que Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-11_Foundation_Hin (-W.H Que Present BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-12_Foundation_Hin (+Sta Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-13_Foundation_Hin (-Sta Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-14_Foundation_Hin (+ Y_N Que Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-15_Foundation_Hin (- Y_N Que Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-16_Foundation_Hin (+ W.H Que Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-17_Foundation_Hin (- W.H Que Future BE FORM).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-18_Foundation_Hin (+_- Sta There & Here).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-19_Foundation_Hin (+_- Y_N Que There & Here).pdf
+    - assets/images/Hindi/stagehindiStage1/Day-20_Foundation_Hin (+_- W.H Que There & Here).pdf
+#   - Hindi Stage 2
+    - assets/images/Hindi/stagehindistage2/Day-2_Accuracy_Hin (+ Sta Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-3_Accuracy_Hin (- Sta Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-4_Accuracy_Hin (+ Y_N Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-5_Accuracy_Hin (- Y_N Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-6_Accuracy_Hin (+W.H Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-7_Accuracy_Hin (-W.H Past Have).pdf
+    - assets/images/Hindi/stagehindistage2/Day-8_Accuracy_Hin [(+_-) Sta Present Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-9_Accuracy_Hin [(+_-) Y_N Present Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-10_Accuracy_Hin [(+_-) W.H Present Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-11_Accuracy_Hin [(+_-) Sta Future Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-12_Accuracy_Hin [(+_-) Y_N Future Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-13_Accuracy_Hin [(+_-) W.H Future Have].pdf
+    - assets/images/Hindi/stagehindistage2/Day-14_Accuracy_Hin[(+_-) Sta Quantifiers].pdf
+    - assets/images/Hindi/stagehindistage2/Day-15_Accuracy_Hin[(+_-) Y_N Quantifiers].pdf
+    - assets/images/Hindi/stagehindistage2/Day-16_Accuracy_Hin[(+_-) W.H Quantifiers].pdf
+    - assets/images/Hindi/stagehindistage2/Day-17_Accuracy_Hin[Possessive Pronouns].pdf
+    - assets/images/Hindi/stagehindistage2/Day-18_Accuracy_Hin[W.H Words].pdf
+    - assets/images/Hindi/stagehindistage2/Day-19_Accuracy_Hin[Time Prepositions].pdf
+    - assets/images/Hindi/stagehindistage2/Day-20_Accuracy_Hin[Place Prepositions].pdf
+    - assets/images/Hindi/stagehindistage2/Day-21_Accuracy_Hin[Frequency Prepositions.pdf
+#   - Hindi Stage 3
+    - assets/images/Hindi/stagehindistage3/Day-2_Progression_Hin (Action Verbs).pdf
+    - assets/images/Hindi/stagehindistage3/Day-3_Progression_Hin (+Sta Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-4_Progression_Hin (-Sta Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-5_Progression_Hin (+Y_N Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-6_Progression_Hin (-Y_N Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-7_Progression_Hin (+W.H Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-8_Progression_Hin (-W.H Past Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-9_Progression_Hin (+Sta Present Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-10_Progression_Hin (-Sta Present Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-11_Progression_Hin (+Y_N Present Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-12_Progression_Hin (-Y_N Present Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-14_Progression_Hin (-W.H Present Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-15_Progression_Hin (+Sta Future Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-16_Progression_Hin (-Sta Future Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-17_Progression_Hin (+Y_N Future Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-18_Progression_Hin (-Y_N Future Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-19_Progression_Hin (+W.H Future Simple).pdf
+    - assets/images/Hindi/stagehindistage3/Day-20_Progression_Hin (-W.H Future Simple).pdf
+#   - Hindi Stage 4
+    - assets/images/Hindi/stagehindistage4/Day-2_Clarity_Hin (Action Verbs)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-3_Clarity_Hin (+_- Sta Past Con)_ .docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-4_Clarity_Hin (+_- Yes Past Con)_ .docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-5_Clarity_Hin (+_- W.H Past Con)_ .docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-6_Clarity_Hin (+_- Sta Present Con)_ .docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-7_Clarity_Hin (+_- Y_N Que Present Con)_ .docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-8_Clarity_Hin (+_- W.H Que Present Con)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-9_Clarity_Hin (+_- Sta Future Con)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-10_Clarity_Hin (+_- Y_N Que Future Con)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-11_Clarity_Hin (+_- W.H Que Future Con)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-12_Clarity_Hin (+_- Order-1)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-13_Clarity_Hin (+_- Order-2)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-14_Clarity_Hin (+_- Request-1)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-15_Clarity_Hin (+_- Request-2)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-16_Clarity_Hin (+_- Permission-1)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-17_Clarity_Hin (+_- Permission-2)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-18_Clarity_Hin (+ Suggestion-1)_.docx.pdf
+    - assets/images/Hindi/stagehindistage4/Day-19_Clarity_Hin (+_- Suggestion-2)_.docx.pdf
+#   - Hindi Stage 5
+    - assets/images/Hindi/stagehindistage5/Day-1_Confidence_Hin (Introduction).pdf
+    - assets/images/Hindi/stagehindistage5/Day-2_Confidence_Hin (+_- Sta Past Habit).pdf
+    - assets/images/Hindi/stagehindistage5/Day-3_Confidence_Hin (+_- Yes_No Past Habit).pdf
+    - assets/images/Hindi/stagehindistage5/Day-4_Confidence_Hin (+_- W.H Past Habit).pdf
+    - assets/images/Hindi/stagehindistage5/Day-5_Confidence_Hin (+_- Sta Past Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage5/Day-6_Confidence_Hin (+_- Yes_No Past Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage5/Day-7_Confidence_Hin (+_- W.H Past Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage5/Day-8_Confidence_Hin (+_- Sta Past Ability).pdf
+    - assets/images/Hindi/stagehindistage5/Day-9_Confidence_Hin (+_- Y_N Past Ability).pdf
+    - assets/images/Hindi/stagehindistage5/Day-10_Confidence_Hin (+_- W.H Past Ability).pdf
+    - assets/images/Hindi/stagehindistage5/Day-11_Confidence_Hin (+_- Sta Past Compulsion).pdf
+    - assets/images/Hindi/stagehindistage5/Day-12_Confidence_Hin (+_- Y_N Past Compulsion).pdf
+    - assets/images/Hindi/stagehindistage5/Day-13_Confidence_Hin (+_- W.H Past Compulsion).pdf
+    - assets/images/Hindi/stagehindistage5/Day-14_Confidence_Hin (If In The Past).pdf
+    - assets/images/Hindi/stagehindistage5/Day-15_Confidence_Hin (If In The Present).pdf
+    - assets/images/Hindi/stagehindistage5/Day-16_Confidence_Hin (If In The Future).pdf
+    - assets/images/Hindi/stagehindistage5/Day-17_Confidence_Hin (When In The Past).pdf
+    - assets/images/Hindi/stagehindistage5/Day-18_Confidence_Hin (When In The Present).pdf
+    - assets/images/Hindi/stagehindistage5/Day-19_Confidence_Hin (When In The Future).pdf
+    - assets/images/Hindi/stagehindistage5/Day-20_Confidence_Hin (After In The Past).pdf
+    - assets/images/Hindi/stagehindistage5/Day-22_Confidence_Hin (After In The Future).pdf
+#   - Hindi Stage 6
+    - assets/images/Hindi/stagehindistage6/Day-2_Confidence_Hin (+_- Sta Present Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage6/Day-3_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-4_Confidence_Hin (+_- Yes_No Present Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage6/Day-5_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-6_Confidence_Hin (+_- W.H Present Willingness-1).pdf
+    - assets/images/Hindi/stagehindistage6/Day-7_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-8_Confidence_Hin (+_- Sta Present Perm Ability).pdf
+    - assets/images/Hindi/stagehindistage6/Day-9_Confidence_Hin (+_- Y_N Present Perm Ability).pdf
+    - assets/images/Hindi/stagehindistage6/Day-10_Confidence_Hin (+_- W.H Present Perm Ability).pdf
+    - assets/images/Hindi/stagehindistage6/Day-11_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-12_Confidence_Hin (+_- Sta Present Temp Ability.pdf
+    - assets/images/Hindi/stagehindistage6/Day-13_Confidence_Hin (+_- Y_N & W.H Present Temp Ability).pdf
+    - assets/images/Hindi/stagehindistage6/Day-14_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-15_Confidence_Hin (+_- Sta Present Compulsion).pdf
+    - assets/images/Hindi/stagehindistage6/Day-16_Confidence_Hin (+_- Y_N Present Compulsion).pdf
+    - assets/images/Hindi/stagehindistage6/Day-17_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-18_Confidence_Hin (Before in the Past).pdf
+    - assets/images/Hindi/stagehindistage6/Day-19_Confidence_Hin (Before in the Present).pdf
+    - assets/images/Hindi/stagehindistage6/Day-20_Confidence_Hin (Before in the Future).pdf
+    - assets/images/Hindi/stagehindistage6/Day-21_Confidence_Hin (Speaking Practice).pdf
+    - assets/images/Hindi/stagehindistage6/Day-22_Confidence_Hin (Speaking Practice).pdf
+
+
+ 
+   
+
+    
+   
 
 
 flutter_icons:

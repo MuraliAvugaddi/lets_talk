@@ -6,6 +6,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:lets_talk/Screens/app_colors.dart'; // Ensure app_colors.dart is imported
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:lets_talk/Screens/auth/otp_verification_screen.dart';
@@ -130,7 +131,7 @@ class AuthController extends GetxController {
         Get.snackbar(
           "Access Synchronized",
           "Your institute permissions have been updated live!",
-          backgroundColor: const Color(0xff7F56D9),
+          backgroundColor: AppColors.teal, // 🎨 Updated to your app color
           colorText: Colors.white,
           duration: const Duration(seconds: 3),
           snackPosition: SnackPosition.BOTTOM,
