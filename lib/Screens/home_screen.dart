@@ -111,7 +111,7 @@ class LearnScreen extends StatefulWidget {
   State<LearnScreen> createState() => _LearnScreenState();
 }
 
-class _LearnScreenState extends State<LearnScreen> {
+class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
   final AuthController authController = Get.find<AuthController>();
   final ConnectivityController netController =
       Get.find<ConnectivityController>();
@@ -119,6 +119,7 @@ class _LearnScreenState extends State<LearnScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     if (!Get.isRegistered<UpdateController>()) {
       Get.put(UpdateController());
@@ -127,6 +128,19 @@ class _LearnScreenState extends State<LearnScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAllData();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshAllData();
+    }
   }
 
   Future<void> _refreshAllData() async {
@@ -148,10 +162,11 @@ class _LearnScreenState extends State<LearnScreen> {
 
   Future<void> fetchAdminNotification() async {
     try {
-      final String userMode = (authController.userData['mode'] ?? 'online')
-          .toString()
-          .toLowerCase();
+      // 1. Get current logged-in student's mode
+      final rawMode = authController.userData['mode']?.toString().toLowerCase().trim();
+      final String userMode = (rawMode == 'offline') ? 'offline' : 'online';
 
+      // 2. Request notice strictly for this mode
       final response = await http.get(
         Uri.parse('${ApiEndpoints.userNotification}?mode=$userMode'),
       );
@@ -159,7 +174,9 @@ class _LearnScreenState extends State<LearnScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        if (data['hasNotification'] == true) {
+        // Verify notification explicitly belongs to this student's mode
+        if (data['hasNotification'] == true &&
+            data['targetMode']?.toString().toLowerCase() == userMode) {
           authController.adminMessage.value = data['message']?.toString();
           authController.isMessageVisible.value = true;
         } else {
@@ -168,7 +185,7 @@ class _LearnScreenState extends State<LearnScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error fetching notification: $e');
+      debugPrint('Error fetching mode-specific notification: $e');
     }
   }
 
@@ -340,86 +357,94 @@ class _LearnScreenState extends State<LearnScreen> {
 
     final Color border = isDark ? AppColors.darkBorder : AppColors.border;
 
-    return Scaffold(
-      backgroundColor: background,
-      body: Column(
-        children: [
-          // ==================================================
-          // FIXED / NON-SCROLLING APP BAR
-          // ==================================================
-          _buildFixedHeader(
-            context: context,
-            isDark: isDark,
-            text: text,
-            secondary: secondary,
-          ),
+    // 🚀 Force status bar icons to be white immediately for the gradient header
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: background,
+        body: Column(
+          children: [
+            // ==================================================
+            // FIXED / NON-SCROLLING APP BAR
+            // ==================================================
+            _buildFixedHeader(
+              context: context,
+              isDark: isDark,
+              text: text,
+              secondary: secondary,
+            ),
 
-          // ==================================================
-          // FIXED OFFLINE BAR
-          // ==================================================
-          Obx(() {
-            if (netController.isConnected.value) {
-              return const SizedBox.shrink();
-            }
+            // ==================================================
+            // FIXED OFFLINE BAR
+            // ==================================================
+            Obx(() {
+              if (netController.isConnected.value) {
+                return const SizedBox.shrink();
+              }
 
-            return Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: AppColors.error10,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.wifi_off_rounded,
-                    color: AppColors.error,
-                    size: 15,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    'No internet connection',
-                    style: GoogleFonts.poppins(
-                      color: AppColors.error,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-
-          // ==================================================
-          // SCROLLABLE CONTENT ONLY
-          // ==================================================
-          Expanded(
-            child: RefreshIndicator(
-              color: AppColors.navy,
-              backgroundColor: surface,
-              onRefresh: _refreshAllData,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.error10,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 110),
-                child: Obx(
-                  () => _buildLearningContent(
-                    context: context,
-                    isDark: isDark,
-                    surface: surface,
-                    surfaceSoft: surfaceSoft,
-                    text: text,
-                    secondary: secondary,
-                    border: border,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.wifi_off_rounded,
+                      color: AppColors.error,
+                      size: 15,
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      'No internet connection',
+                      style: GoogleFonts.poppins(
+                        color: AppColors.error,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            // ==================================================
+            // SCROLLABLE CONTENT ONLY
+            // ==================================================
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.navy,
+                backgroundColor: surface,
+                onRefresh: _refreshAllData,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 110),
+                  child: Obx(
+                    () => _buildLearningContent(
+                      context: context,
+                      isDark: isDark,
+                      surface: surface,
+                      surfaceSoft: surfaceSoft,
+                      text: text,
+                      secondary: secondary,
+                      border: border,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -713,9 +738,6 @@ class _LearnScreenState extends State<LearnScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ======================================================
-        // ADMIN NOTICE
-        // ======================================================
         if (authController.adminMessage.value != null &&
             authController.isMessageVisible.value)
           _buildAdminNotice(
@@ -726,9 +748,6 @@ class _LearnScreenState extends State<LearnScreen> {
             secondary: secondary,
           ),
 
-        // ======================================================
-        // PROGRESS CARD
-        // ======================================================
         _buildJourneyCard(
           context: context,
           isDark: isDark,
@@ -741,9 +760,6 @@ class _LearnScreenState extends State<LearnScreen> {
 
         const SizedBox(height: 18),
 
-        // ======================================================
-        // INTERACTIVE ONLINE CLASSES
-        // ======================================================
         if (isOnlineStudent)
           _buildInteractiveClasses(
             context: context,
@@ -755,9 +771,6 @@ class _LearnScreenState extends State<LearnScreen> {
 
         if (isOnlineStudent) const SizedBox(height: 20),
 
-        // ======================================================
-        // LEARNING PATH HEADER
-        // ======================================================
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -808,9 +821,6 @@ class _LearnScreenState extends State<LearnScreen> {
 
         const SizedBox(height: 10),
 
-        // ======================================================
-        // STAGES
-        // ======================================================
         ...stagesData.map(
           (stage) => Padding(
             padding: const EdgeInsets.only(bottom: 9),
@@ -833,10 +843,6 @@ class _LearnScreenState extends State<LearnScreen> {
       ],
     );
   }
-
-  // ============================================================
-  // ADMIN NOTICE
-  // ============================================================
 
   Widget _buildAdminNotice({
     required BuildContext context,
@@ -915,10 +921,6 @@ class _LearnScreenState extends State<LearnScreen> {
       ),
     );
   }
-
-  // ============================================================
-  // JOURNEY / PROGRESS CARD
-  // ============================================================
 
   Widget _buildJourneyCard({
     required BuildContext context,
@@ -1031,10 +1033,6 @@ class _LearnScreenState extends State<LearnScreen> {
       ),
     );
   }
-
-  // ============================================================
-  // INTERACTIVE CLASSES
-  // ============================================================
 
   Widget _buildInteractiveClasses({
     required BuildContext context,
@@ -1229,10 +1227,6 @@ class _LearnScreenState extends State<LearnScreen> {
       ),
     );
   }
-
-  // ============================================================
-  // STAGE CARD
-  // ============================================================
 
   Widget _buildStageCard({
     required BuildContext context,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
+import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
@@ -549,11 +550,27 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
     final user = authController.userData;
     final userId = (user['id'] ?? user['_id']).toString();
     final userName = user['name'] ?? 'Student';
-    final String section = (user['onlineSection'] ?? user['section'] ?? 'A')
+    final String rawSection = (user['onlineSection'] ?? user['section'] ?? 'A')
         .toString()
         .toLowerCase();
 
     try {
+      // 🚀 CHECK IF THIS SECTION IS TEMPORARILY MERGED INTO ANOTHER SECTION TODAY
+      String effectiveSection = rawSection;
+      try {
+        final mergeRes = await http.get(
+          Uri.parse("${ApiEndpoints.baseUrl}/admin/resolve-section?language=${widget.language}&stage=${widget.stage}&section=$rawSection"),
+        );
+        if (mergeRes.statusCode == 200) {
+          final mergeData = jsonDecode(mergeRes.body);
+          if (mergeData['effectiveSection'] != null) {
+            effectiveSection = mergeData['effectiveSection'].toString().toLowerCase();
+          }
+        }
+      } catch (e) {
+        debugPrint("Resolve section error (falling back to default): $e");
+      }
+
       final tokenRes = await http.post(
         Uri.parse("${ApiEndpoints.baseUrl}/stream/token"),
         headers: {"Content-Type": "application/json"},
@@ -570,8 +587,9 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
         token: token,
       );
 
+      // 🚀 Use effectiveSection so guest sections join the host section's stream call ID seamlessly
       final callId = widget.language.toLowerCase() == "english"
-          ? "${widget.language.toLowerCase()}_${widget.stage.toLowerCase()}_sec${section}_${widget.type}"
+          ? "${widget.language.toLowerCase()}_${widget.stage.toLowerCase()}_sec${effectiveSection}_${widget.type}"
           : "${widget.language.toLowerCase()}_${widget.stage.toLowerCase()}_${widget.type}";
 
       final call = client.makeCall(
@@ -582,7 +600,6 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget>
       await call.getOrCreate();
       await call.join();
 
-      // 🚀 Enforce the mute state immediately upon joining
       await call.setMicrophoneEnabled(enabled: !initialMuted);
 
       GlobalAudioOverlayController.removeOverlay();
@@ -777,6 +794,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
   bool _isAttendanceStarted = false;
   bool _isPoorConnection = false;
   Timer? _muteGuardTimer;
+  bool _isExiting = false;
 
   Color get backgroundColor =>
       Get.isDarkMode ? AppColors.darkBackground : AppColors.background;
@@ -798,8 +816,6 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
 
     _recordOnlineJoin();
 
-    // 🚀 FIXED: Continuously lock the mic state during the first few seconds if joined muted
-    // to prevent server-side/SDK handshakes from overriding the mute choice.
     if (widget.initialMuted) {
       int checks = 0;
       _muteGuardTimer = Timer.periodic(const Duration(milliseconds: 400), (
@@ -822,21 +838,13 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     }
 
     widget.call.state.asStream().listen((callState) {
+      if (!mounted || _isExiting) return;
+
       final participants = callState.callParticipants;
-      if (participants.isNotEmpty) {
-        final stillInCall = participants.any((p) => p.userId == widget.userId);
-        if (!stillInCall && mounted) {
-          _recordOnlineLeave();
-          WakelockPlus.disable();
-          GlobalAudioOverlayController.removeOverlay();
-          Get.until((route) => route.isFirst);
-          Get.snackbar(
-            "Removed from Class",
-            "You have been removed from the session by the instructor.",
-            backgroundColor: Colors.redAccent,
-            colorText: Colors.white,
-          );
-        }
+      final bool stillInCall = participants.any((p) => p.userId == widget.userId);
+
+      if (!stillInCall || callState.endedAt != null) {
+        _handleClassExit();
       }
     });
 
@@ -902,12 +910,51 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     }
   }
 
+  /// 🚀 Safely determines language from widgetRef or authController to route back to Hindi or English home tab correctly
+  void _navigateToHome() {
+    String lang = widget.widgetRef?.language ?? '';
+    if (lang.isEmpty) {
+      try {
+        final authController = Get.find<AuthController>();
+        lang = authController.userData['language']?.toString() ?? 'english';
+      } catch (_) {
+        lang = 'english';
+      }
+    }
+
+    int tabIndex = (lang.toLowerCase() == 'hindi') ? 1 : 0;
+    Get.offAll(() => MainNavigationScreen(initialIndex: tabIndex));
+  }
+
+  Future<void> _handleClassExit() async {
+    if (_isExiting) return;
+    _isExiting = true;
+
+    await _recordOnlineLeave();
+    WakelockPlus.disable();
+    GlobalAudioOverlayController.removeOverlay();
+    try {
+      await widget.call.leave();
+    } catch (_) {}
+
+    if (mounted) {
+      _navigateToHome();
+      Get.snackbar(
+        "Class Ended",
+        "The classroom session has ended or you were removed.",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+      );
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       if (!_isAppSwitchWarningShown && mounted) {
         _isAppSwitchWarningShown = true;
 
@@ -957,11 +1004,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                 ),
                 onPressed: () async {
                   Get.back();
-                  await _recordOnlineLeave();
-                  WakelockPlus.disable();
-                  GlobalAudioOverlayController.removeOverlay();
-                  await widget.call.leave();
-                  Get.until((route) => route.isFirst);
+                  await _handleClassExit();
                 },
                 child: Text(
                   "Exit Class",
@@ -976,6 +1019,8 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           barrierDismissible: false,
         );
       }
+    } else if (state == AppLifecycleState.resumed) {
+      _isAppSwitchWarningShown = false;
     }
   }
 
@@ -1033,11 +1078,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
             ),
             onPressed: () async {
               Get.back();
-              await _recordOnlineLeave();
-              WakelockPlus.disable();
-              GlobalAudioOverlayController.removeOverlay();
-              await widget.call.leave();
-              Get.until((route) => route.isFirst);
+              await _handleClassExit();
             },
             child: Text(
               "Leave",
@@ -1088,7 +1129,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           actions: [
             IconButton(
               icon: Icon(Icons.picture_in_picture_alt_rounded, color: roomText),
-              tooltip: "Minimize (Read Notes)",
+              tooltip: "Minimize",
               onPressed: () {
                 Get.until((route) => route.isFirst);
                 GlobalAudioOverlayController.showOverlay(
@@ -1107,6 +1148,14 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           builder: (context, snapshot) {
             final callState = snapshot.data;
             final rawParticipants = callState?.callParticipants ?? [];
+
+            if (callState != null && callState.endedAt != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                if (mounted) {
+                  await _handleClassExit();
+                }
+              });
+            }
 
             final seenUserIds = <String>{};
             final participants = rawParticipants.where((p) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +19,15 @@ Future<void> main() async {
   );
 
   await GetStorage.init();
+
+  // 🚀 Force immediate status bar style on app launch to match header gradient
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // White icons for dark header
+      statusBarBrightness: Brightness.dark,
+    ),
+  );
 
   Get.put(
     ThemeController(),

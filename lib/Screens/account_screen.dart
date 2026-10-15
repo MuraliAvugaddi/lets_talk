@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -340,9 +341,6 @@ class _AccountScreenState extends State<AccountScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // =========================================================
-                // PROFILE HERO
-                // =========================================================
                 Obx(() {
                   final name = (controller.userData['name'] ?? "User Name")
                       .toString();
@@ -375,7 +373,6 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     child: Column(
                       children: [
-                        // Clean fallback initial badge (Asset image completely removed)
                         Container(
                           width: 88,
                           height: 88,
@@ -528,9 +525,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
                 const SizedBox(height: 10),
 
-                // =========================================================
-                // PAYMENT
-                // =========================================================
                 Obx(() {
                   final isOnline =
                       (controller.userData['mode'] ?? "online")
@@ -597,9 +591,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
                 const SizedBox(height: 10),
 
-                // =========================================================
-                // THEME
-                // =========================================================
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -665,9 +656,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
                 const SizedBox(height: 11),
 
-                // =========================================================
-                // COMMUNITY
-                // =========================================================
                 Obx(() {
                   final isOnline =
                       (controller.userData['mode'] ?? "online")
@@ -713,9 +701,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
                 const SizedBox(height: 24),
 
-                // =========================================================
-                // ACCOUNT ACTIONS
-                // =========================================================
                 _dangerAction(
                   context,
                   icon: Icons.logout_rounded,
@@ -1318,20 +1303,47 @@ class PaymentDetailsScreen extends StatelessWidget {
     required this.managerPhone,
   });
 
-  Future<void> _openWhatsApp(String phoneNumber, String message) async {
-    final String cleanPhone = phoneNumber.replaceAll(RegExp(r'\D'), '');
+  Future<void> _uploadScreenshot(BuildContext context) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
 
-    final Uri whatsappUri = Uri.parse(
-      "https://wa.me/91$cleanPhone?text=${Uri.encodeComponent(message)}",
-    );
+    if (image == null) return;
 
-    if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
-      Get.snackbar(
-        "Error",
-        "Could not open WhatsApp for +91 $phoneNumber",
-        backgroundColor: AppColors.error,
-        colorText: Colors.white,
+    final authController = Get.find<AuthController>();
+    final userId = authController.userData['id'] ?? authController.userData['_id'];
+
+    try {
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
       );
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse("${ApiEndpoints.baseUrl}/fee/upload-fee-screenshot"),
+      );
+
+      request.fields['userId'] = userId.toString();
+      request.files.add(await http.MultipartFile.fromPath('screenshot', image.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (Get.isDialogOpen ?? false) Get.back(); // close loader
+
+      if (response.statusCode == 200) {
+        Get.snackbar(
+          "Success", 
+          "Screenshot uploaded successfully! Management will verify shortly.", 
+          backgroundColor: Colors.green, 
+          colorText: Colors.white
+        );
+      } else {
+        Get.snackbar("Error", "Failed to upload screenshot.", backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.snackbar("Error", "Connection error: $e", backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 
@@ -1565,8 +1577,8 @@ class PaymentDetailsScreen extends StatelessWidget {
                             _paymentStep(
                               context,
                               number: "3",
-                              title: "Send to your manager",
-                              subtitle: "Share the receipt on WhatsApp.",
+                              title: "Upload to app",
+                              subtitle: "Submit screenshot for automated verification.",
                             ),
                           ],
                         ),
@@ -1579,22 +1591,17 @@ class PaymentDetailsScreen extends StatelessWidget {
                       width: double.infinity,
                       height: veryCompact ? 44 : 46,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          _openWhatsApp(
-                            managerPhone,
-                            "Hello, I have completed the course fee payment. Please find the attached transaction screenshot.",
-                          );
-                        },
-                        icon: const Icon(Icons.chat_rounded, size: 18),
+                        onPressed: () => _uploadScreenshot(context),
+                        icon: const Icon(Icons.cloud_upload_rounded, size: 18),
                         label: Text(
-                          "Share Receipt via WhatsApp",
+                          "Upload Payment Screenshot",
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.navy,
+                          backgroundColor: AppColors.teal,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -1607,7 +1614,7 @@ class PaymentDetailsScreen extends StatelessWidget {
                     const SizedBox(height: 4),
 
                     Text(
-                      "Send the payment screenshot to your assigned manager.",
+                      "Upload your payment receipt screenshot for instant review.",
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
