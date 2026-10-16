@@ -11,8 +11,27 @@ import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Screens/student_attendance_screen.dart';
 import 'package:lets_talk/Screens/student_test_results_screen.dart';
+import 'package:lets_talk/Screens/leaderboard_screen.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:lets_talk/apis/batch_slots.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+/// One enabled stage and the timing the student attends it at
+class _StageTiming {
+  final String language; // "English" | "Hindi"
+  final String stage; // "stage1".."stage7"
+  final String title; // "English • Stage 1"
+  final String timing; // canonical label or ""
+  final bool own; // true = stage has its own timing, false = signup default
+
+  const _StageTiming({
+    required this.language,
+    required this.stage,
+    required this.title,
+    required this.timing,
+    required this.own,
+  });
+}
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -208,7 +227,11 @@ class _AccountScreenState extends State<AccountScreen> {
                                 final userData = controller.userData;
                                 final response = await http.post(
                                   Uri.parse(ApiEndpoints.submitFeedback),
-                                  headers: {"Content-Type": "application/json"},
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    if ((controller.box.read('token') ?? '').toString().isNotEmpty)
+                                      "Authorization": "Bearer ${controller.box.read('token')}",
+                                  },
                                   body: jsonEncode({
                                     "userId": userData['id'] ?? userData['_id'],
                                     "name": userData['name'] ?? "Student",
@@ -515,6 +538,18 @@ class _AccountScreenState extends State<AccountScreen> {
                   );
                 }),
 
+                const SizedBox(height: 14),
+
+                // ⏰ CLASS TIMING — one timing per enabled stage (Stage 1 morning, Stage 2 evening…)
+                Obx(() {
+                  final stages = _enabledStages();
+                  if (stages.isEmpty) {
+                    final slot = BatchSlots.find(controller.userData['batchTime']);
+                    return _classTimingCard(context, slot);
+                  }
+                  return _stageTimingsCard(context, stages);
+                }),
+
                 const SizedBox(height: 24),
 
                 _sectionLabel(
@@ -572,6 +607,17 @@ class _AccountScreenState extends State<AccountScreen> {
                   title: "Test Results & Scores",
                   subtitle: "Review exams, marks & percentages",
                   onTap: () => Get.to(() => const StudentTestResultsScreen()),
+                ),
+
+                const SizedBox(height: 11),
+
+                _actionCard(
+                  context: context,
+                  icon: Icons.emoji_events_rounded,
+                  iconColor: const Color(0xFFE3B21B),
+                  title: "Hall of Fame",
+                  subtitle: "Best student & trainer, and your rank",
+                  onTap: () => Get.to(() => const StudentLeaderboardScreen()),
                 ),
 
                 const SizedBox(height: 11),
@@ -753,6 +799,483 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Enabled stages with their effective timing: (language, stageKey, title, timingLabel, isOwn)
+  List<_StageTiming> _enabledStages() {
+    final data = controller.userData;
+    final defaultTiming = BatchSlots.labelOf(data['batchTime']);
+    final out = <_StageTiming>[];
+    for (final lang in const ['English', 'Hindi']) {
+      final access = data[lang == 'English' ? 'englishAccess' : 'hindiAccess'];
+      final batches = data[lang == 'English' ? 'englishBatch' : 'hindiBatch'];
+      if (access is! Map) continue;
+      for (int i = 1; i <= 7; i++) {
+        final key = 'stage$i';
+        if (access[key] != true) continue;
+        final own = batches is Map ? BatchSlots.labelOf(batches[key]) : '';
+        out.add(_StageTiming(
+          language: lang,
+          stage: key,
+          title: '$lang • Stage $i',
+          timing: own.isNotEmpty ? own : defaultTiming,
+          own: own.isNotEmpty,
+        ));
+      }
+    }
+    return out;
+  }
+
+  Widget _stageTimingsCard(
+    BuildContext context,
+    List<_StageTiming> stages,
+  ) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = theme.colorScheme.onSurface;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 6),
+      decoration: BoxDecoration(
+        color: isDark ? theme.cardColor : const Color(0xFFF7FBFD),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.teal.withOpacity(0.30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.schedule_rounded, color: AppColors.teal, size: 17),
+              const SizedBox(width: 6),
+              Text(
+                "MY CLASS TIMINGS",
+                style: GoogleFonts.poppins(
+                  color: textColor.withOpacity(0.60),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.9,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ...stages.map((st) {
+            final slot = BatchSlots.find(st.timing);
+            return InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showBatchPicker(context, language: st.language, stage: st.stage, title: st.title),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: (slot == null ? AppColors.yellow : AppColors.teal).withOpacity(0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        slot == null ? "?" : "${slot.number}",
+                        style: GoogleFonts.poppins(
+                          color: slot == null
+                              ? (isDark ? AppColors.yellow : AppColors.deepNavy)
+                              : AppColors.teal,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            st.title,
+                            style: GoogleFonts.poppins(
+                              color: textColor.withOpacity(0.62),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            slot == null ? "Timing not set" : slot.shortLabel,
+                            style: GoogleFonts.poppins(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      slot == null ? "CHOOSE" : "CHANGE",
+                      style: GoogleFonts.poppins(
+                        color: slot == null
+                            ? (isDark ? AppColors.yellow : AppColors.deepNavy)
+                            : AppColors.teal,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.35), size: 20),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _classTimingCard(BuildContext context, BatchSlot? slot) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = theme.colorScheme.onSurface;
+    final bool notSet = slot == null;
+    final Color accent = notSet ? AppColors.yellow : AppColors.teal;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showBatchPicker(context),
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? theme.cardColor : const Color(0xFFF7FBFD),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: accent.withOpacity(notSet ? 0.65 : 0.30), width: notSet ? 1.4 : 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: notSet
+                    ? Icon(Icons.schedule_rounded, color: isDark ? AppColors.yellow : AppColors.deepNavy, size: 24)
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "BATCH",
+                            style: GoogleFonts.poppins(
+                              color: AppColors.teal,
+                              fontSize: 7,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          Text(
+                            "${slot!.number}",
+                            style: GoogleFonts.poppins(
+                              color: textColor,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              height: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "MY CLASS TIMING",
+                      style: GoogleFonts.poppins(
+                        color: textColor.withOpacity(0.55),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.9,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notSet ? "Not selected yet" : slot!.shortLabel,
+                      style: GoogleFonts.poppins(
+                        color: textColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      notSet ? "Tap to choose your daily batch" : "Tap to change your batch",
+                      style: GoogleFonts.poppins(
+                        color: textColor.withOpacity(0.58),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  notSet ? "CHOOSE" : "CHANGE",
+                  style: GoogleFonts.poppins(
+                    color: notSet ? (isDark ? AppColors.yellow : AppColors.deepNavy) : AppColors.teal,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBatchPicker(BuildContext context, {String? language, String? stage, String? title}) {
+    final all = _enabledStages();
+    String currentFor() {
+      if (stage == null) return BatchSlots.labelOf(controller.userData['batchTime']);
+      for (final st in all) {
+        if (st.language == language && st.stage == stage) return st.timing;
+      }
+      return '';
+    }
+
+    // Timings used by my OTHER stages can't be picked (can't attend two classes at once)
+    final taken = <String, String>{};
+    if (stage != null) {
+      for (final st in all) {
+        if (st.language == language && st.stage == stage) continue;
+        if (st.timing.isNotEmpty) taken.putIfAbsent(st.timing, () => st.title);
+      }
+    }
+
+    String tempSelected = currentFor();
+
+    Get.bottomSheet(
+      StatefulBuilder(
+        builder: (context, setSheetState) {
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+          final textColor = theme.colorScheme.onSurface;
+          final current = currentFor();
+
+          Widget slotTile(BatchSlot slot) {
+            final bool selected = tempSelected == slot.label;
+            final bool isCurrent = current == slot.label;
+            final String? usedBy = taken[slot.label];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: usedBy != null ? null : () => setSheetState(() => tempSelected = slot.label),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.teal.withOpacity(0.12)
+                        : (isDark ? AppColors.darkSurface2 : AppColors.surfaceSoft),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected ? AppColors.teal : AppColors.teal.withOpacity(0.14),
+                      width: selected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.teal : AppColors.navy.withOpacity(0.10),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          "${slot.number}",
+                          style: GoogleFonts.poppins(
+                            color: selected ? Colors.white : textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              slot.shortLabel,
+                              style: GoogleFonts.poppins(
+                                color: usedBy != null ? textColor.withOpacity(0.35) : textColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (usedBy != null)
+                              Text(
+                                "Used by $usedBy",
+                                style: GoogleFonts.poppins(
+                                  color: AppColors.error,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (isCurrent)
+                        Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.navy.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            "CURRENT",
+                            style: GoogleFonts.poppins(
+                              color: isDark ? AppColors.teal : AppColors.navy,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      Icon(
+                        selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                        color: selected ? AppColors.teal : textColor.withOpacity(0.35),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          Widget periodTitle(String title) => Padding(
+                padding: const EdgeInsets.only(bottom: 7, top: 4),
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    color: textColor.withOpacity(0.60),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                  ),
+                ),
+              );
+
+          return Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: textColor.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    title == null ? "Change Class Timing" : "Timing for $title",
+                    style: GoogleFonts.poppins(color: textColor, fontSize: 17, fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    stage == null
+                        ? "Your trainer and attendance will follow the new batch."
+                        : "Only this stage changes. Timings of your other stages are blocked.",
+                    style: GoogleFonts.poppins(color: textColor.withOpacity(0.60), fontSize: 11.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          periodTitle("MORNING"),
+                          ...BatchSlots.morning.map(slotTile),
+                          periodTitle("EVENING"),
+                          ...BatchSlots.evening.map(slotTile),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Obx(() {
+                    final saving = controller.isSavingBatch.value;
+                    final unchanged = tempSelected.isEmpty || tempSelected == current;
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: (saving || unchanged)
+                            ? null
+                            : () async {
+                                final ok = await controller.updateBatchTime(
+                                  tempSelected,
+                                  language: language,
+                                  stage: stage,
+                                );
+                                if (ok && (Get.isBottomSheetOpen ?? false)) Get.back();
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.navy,
+                          disabledBackgroundColor: AppColors.navy.withOpacity(0.40),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                              )
+                            : Text(
+                                unchanged ? "Select a new timing" : "Save Timing",
+                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      isScrollControlled: true,
     );
   }
 
@@ -1323,6 +1846,8 @@ class PaymentDetailsScreen extends StatelessWidget {
         Uri.parse("${ApiEndpoints.baseUrl}/fee/upload-fee-screenshot"),
       );
 
+      final String token = (authController.box.read('token') ?? '').toString();
+      if (token.isNotEmpty) request.headers['Authorization'] = 'Bearer $token';
       request.fields['userId'] = userId.toString();
       request.files.add(await http.MultipartFile.fromPath('screenshot', image.path));
 

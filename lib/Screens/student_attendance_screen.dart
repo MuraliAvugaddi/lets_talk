@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -54,11 +55,13 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
     }
 
     try {
+      final token = (GetStorage().read('token') ?? '').toString();
       final response = await http.get(
         Uri.parse(
           "${ApiEndpoints.myAttendance}"
           "?userId=$userId",
         ),
+        headers: {if (token.isNotEmpty) 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -140,6 +143,13 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
 
       return status == 'late' || status == 'partial';
     }).length;
+  }
+
+  // 🎤 Classes where the trainer marked speaking practice
+  int get practicedCount {
+    return monthlyFilteredRecords
+        .where((record) => record['practiced'] == true)
+        .length;
   }
 
   int get absentCount {
@@ -328,7 +338,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
 
                       child: Text(
                         "${monthlyFilteredRecords.length} "
-                        "${monthlyFilteredRecords.length == 1 ? 'class' : 'classes'}",
+                        "${monthlyFilteredRecords.length == 1 ? 'class' : 'classes'}"
+                        "${practicedCount > 0 ? ' • $practicedCount 🎤' : ''}",
 
                         style: GoogleFonts.poppins(
                           color: AppColors.teal,
@@ -878,6 +889,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
 
     final String batchTime = item['batchTime']?.toString() ?? "Live Stream";
 
+    final bool practiced = item['practiced'] == true;
+
     // ==========================================================
     // STATUS COLOR
     // ==========================================================
@@ -1052,6 +1065,40 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
                     ),
                   ],
                 ),
+
+                // SPEAKING PRACTICE
+                if (practiced) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.record_voice_over_rounded,
+                          size: 11,
+                          color: AppColors.teal,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Speaking practice done",
+                          style: GoogleFonts.poppins(
+                            color: AppColors.teal,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -12,9 +12,11 @@ import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:lets_talk/Screens/app_colors.dart'; // 🚀 Added missing AppColors import
 import 'package:lets_talk/Screens/auth/otp_verification_screen.dart';
 import 'package:lets_talk/Screens/auth/reset_password_screen.dart';
+import 'package:lets_talk/Screens/auth/signup_batch_screen.dart';
 import 'package:lets_talk/Screens/auth/signup_screen2.dart';
 import 'package:lets_talk/Screens/auth/welcome_screen.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
+import 'package:lets_talk/apis/batch_slots.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 
@@ -45,6 +47,8 @@ var verificationId = ''.obs;
 int? resendToken;
 var currentOtpFlow = OtpFlowType.registration.obs;
 String selectedMode = "online";
+var selectedBatch = ''.obs; // canonical label, e.g. "05:30 AM - 07:00 AM"
+var isSavingBatch = false.obs;
 
 var userData = {}.obs;
 
@@ -97,6 +101,7 @@ socket = IO.io(
   ApiEndpoints.socketUrl,
   IO.OptionBuilder()
       .setTransports(['websocket'])
+      .setAuth({'token': box.read('token') ?? ''})
       .enableAutoConnect()
       .build(),
 );
@@ -312,8 +317,23 @@ colorText: Colors.white,
 }
 }
 
+// Step 2 → Step 3: remember the mode, then ask for the class timing
 void initiateSignupOtp(String mode) {
 selectedMode = mode;
+Get.to(() => const SignupBatchScreen());
+}
+
+// Step 3 → OTP: timing chosen, verify the phone number
+void confirmBatchAndSendOtp() {
+if (BatchSlots.find(selectedBatch.value) == null) {
+Get.snackbar(
+"Choose a timing",
+"Please select the batch you will attend.",
+backgroundColor: Colors.redAccent,
+colorText: Colors.white,
+);
+return;
+}
 sendOtp(
 rawPhone: phoneController.text.trim(),
 flowType: OtpFlowType.registration,
@@ -331,6 +351,7 @@ body: jsonEncode({
 "phone": phoneController.text.trim(),
 "password": passwordController.text,
 "mode": selectedMode,
+"batchTime": selectedBatch.value,
 }),
 );
 
@@ -342,6 +363,7 @@ body: jsonEncode({
     userData.value = data['user'];
 
     initSocket();
+    selectedBatch.value = '';
 
     Get.offAll(() => const MainNavigationScreen());
     Get.snackbar(
@@ -472,18 +494,32 @@ return;
 
 isLoading.value = true;
 try {
+  // Proof of the OTP the user just verified — the server checks it with Firebase
+  final String? idToken = await _firebaseAuth.currentUser?.getIdToken(true);
+  if (idToken == null) {
+    Get.snackbar(
+      "Verification expired",
+      "Please verify your phone number again.",
+      backgroundColor: Colors.redAccent,
+      colorText: Colors.white,
+    );
+    return;
+  }
+
   final response = await http.post(
     Uri.parse(ApiEndpoints.resetPassword),
     headers: {"Content-Type": "application/json"},
     body: jsonEncode({
       "phone": forgotPhoneController.text.trim(),
       "newPassword": newPasswordController.text,
+      "idToken": idToken,
     }),
   );
 
   final data = jsonDecode(response.body);
 
   if (response.statusCode == 200) {
+    await _firebaseAuth.signOut();
     Get.offAll(() => const WelcomeScreen());
     Get.snackbar(
       "Success",
@@ -540,6 +576,71 @@ try {
   debugPrint("Background refresh failed: $e");
 }
 
+}
+
+// ==========================================
+// CLASS TIMING (student changes own batch)
+// ==========================================
+/// language + stage → timing for that stage only (e.g. English stage2).
+/// Without them → the default timing chosen at signup.
+Future<bool> updateBatchTime(String batchLabel, {String? language, String? stage}) async {
+final String? token = box.read('token');
+if (token == null || BatchSlots.find(batchLabel) == null) return false;
+
+isSavingBatch.value = true;
+try {
+  final response = await http.put(
+    Uri.parse("${ApiEndpoints.baseUrl}/user/batch-time"),
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    },
+    body: jsonEncode({
+      "batchTime": batchLabel,
+      if (stage != null) "stage": stage,
+      if (language != null) "language": language,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    final updated = Map<String, dynamic>.from(userData);
+    updated['batchTime'] = data['batchTime'] ?? updated['batchTime'];
+    if (data['englishBatch'] != null) updated['englishBatch'] = data['englishBatch'];
+    if (data['hindiBatch'] != null) updated['hindiBatch'] = data['hindiBatch'];
+    userData.value = updated;
+    userData.refresh();
+    box.write('user', updated);
+
+    Get.snackbar(
+      "Timing Updated",
+      "Your class timing is now ${BatchSlots.shortOf(batchLabel)}.",
+      backgroundColor: AppColors.teal,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+    );
+    return true;
+  }
+
+  handleApiResponse(response);
+  String msg = "Could not update timing. Please try again.";
+  try {
+    final data = jsonDecode(response.body);
+    if (data is Map && data['message'] != null) msg = data['message'].toString();
+  } catch (_) {}
+  Get.snackbar("Error", msg, backgroundColor: Colors.redAccent, colorText: Colors.white);
+  return false;
+} catch (e) {
+  Get.snackbar(
+    "Error",
+    "Connection failed",
+    backgroundColor: Colors.redAccent,
+    colorText: Colors.white,
+  );
+  return false;
+} finally {
+  isSavingBatch.value = false;
+}
 }
 
 Future<void> deleteAccount() async {
@@ -628,3 +729,4 @@ Get.offAll(() => const WelcomeScreen());
 );
 }
 }
+

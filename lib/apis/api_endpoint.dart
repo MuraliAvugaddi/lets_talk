@@ -1,11 +1,10 @@
 class ApiEndpoints {
-  static const String baseUrl =
-      "https://lets-talk-backend-o06t.onrender.com/api";
-  static const String socketUrl = "https://lets-talk-backend-o06t.onrender.com";
-  //   static const String baseUrl =  "http://192.168.1.4:5001/api";
+  // static const String baseUrl =
+  //     "https://lets-talk-backend-o06t.onrender.com/api";
+  // static const String socketUrl = "https://lets-talk-backend-o06t.onrender.com";
+  static const String baseUrl = "http://192.168.1.3:5000/api";
 
-  // static const String socketUrl = "http://192.168.1.4:5001";
-
+  static const String socketUrl = "http://192.168.1.3:5000";
 
   // Auth & Profile
   static const String register = "$baseUrl/register";
