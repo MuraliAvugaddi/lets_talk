@@ -6,9 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
-import 'package:lets_talk/Screens/app_colors.dart';
-
-// --- HINDI STAGE SCREENS ---
+import 'package:lets_talk/Controllers/classModeController.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage1_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage2_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage3_screen.dart';
@@ -16,6 +14,9 @@ import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage4_
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage5_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage6_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage7_screen.dart';
+import 'package:lets_talk/Screens/widgets/assembly_join_screen.dart';
+import 'package:lets_talk/Screens/app_colors.dart';
+
 
 // --- HINDI ONLINE STAGE SCREENS ---
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_online5/Hindi_online_stage1_screen.dart';
@@ -75,7 +76,10 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
       _showNoInternetSnackbar();
       return;
     }
-    await authController.refreshProfile();
+    await Future.wait([
+      authController.refreshProfile(),
+      ClassModeController.to.fetch(), // 🌐 offline-online day / 🎙 special class
+    ]);
   }
 
   bool _isLocked(String key) {
@@ -324,6 +328,10 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                           () => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (ClassModeController.to.assemblyOn) _buildAssemblyCard(),
+                              if (ClassModeController.to.rainOn &&
+                                  (authController.userData['mode'] ?? 'online').toString().toLowerCase() == 'offline')
+                                _buildRainNotice(),
                               _buildProgressHero(
                                 isDark: isDark,
                                 unlocked: _unlockedCount(),
@@ -635,6 +643,82 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
               minHeight: 7,
               backgroundColor: AppColors.teal.withValues(alpha: 0.10),
               valueColor: const AlwaysStoppedAnimation(AppColors.teal),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🎙 Special class card (everyone joins one class)
+  Widget _buildAssemblyCard() {
+    final cm = ClassModeController.to;
+    return GestureDetector(
+      onTap: () => Get.to(() => AssemblyJoinScreen(title: cm.assemblyTitle, startTime: cm.assemblyTime)),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF7B2FF7), Color(0xFFD6336C)]),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(cm.assemblyTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                  Text(
+                    'Today ${cm.assemblyTime.isNotEmpty ? 'at ${cm.assemblyTime} ' : ''}• all students join one class',
+                    maxLines: 2,
+                    style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.85), fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Text('Join',
+                  style: GoogleFonts.poppins(color: const Color(0xFF7B2FF7), fontSize: 12, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🌐 Offline classes online today (reason from admin)
+  Widget _buildRainNotice() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+      decoration: BoxDecoration(
+        color: AppColors.blue.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.blue.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          const Text('🌐', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
+              style: GoogleFonts.poppins(color: AppColors.blue, fontSize: 10.5, fontWeight: FontWeight.w600, height: 1.35),
             ),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
+import 'package:stream_video_flutter/stream_video_flutter.dart' as svf show Priority;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
@@ -77,7 +79,17 @@ class ClassFlags {
     required this.total,
   });
 
-  factory ClassFlags.from(Map<String, Object> c) {
+  factory ClassFlags.from(Map<String, Object> custom) {
+    // The trainer sends everything as ONE JSON text in custom['state']
+    // (a null value in custom data crashes Stream joins).
+    Map<String, dynamic> c = custom;
+    final packed = custom['state'];
+    if (packed is String && packed.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(packed);
+        if (decoded is Map) c = Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
     String str(String k) => (c[k] ?? '').toString();
     int toInt(String k) {
       final v = c[k];
@@ -89,7 +101,9 @@ class ClassFlags {
     final a = c['allowed'];
     return ClassFlags(
       micLocked: c['micLocked'] == true,
-      allowed: a is List ? a.map((e) => e.toString()).toSet() : <String>{},
+      allowed: a is List
+          ? a.map((e) => e.toString()).toSet()
+          : '${a ?? ''}'.split(',').where((e) => e.isNotEmpty).toSet(),
       practiceActive: c['pActive'] == true,
       current: str('pCurrent'),
       currentName: str('pCurrentName'),
@@ -164,6 +178,7 @@ class StreamManager {
       _apiKey,
       user: User.regular(userId: userId, name: userName),
       userToken: _token!,
+      options: StreamVideoOptions(logPriority: svf.Priority.warning),
     );
     _userId = userId;
     return _client!;
@@ -185,6 +200,7 @@ class StreamManager {
       _apiKey,
       user: User.regular(userId: userId, name: userName),
       userToken: token,
+      options: StreamVideoOptions(logPriority: svf.Priority.warning),
     );
     _userId = userId;
     return _client!;
@@ -458,6 +474,271 @@ class _FloatingAudioPiPWidgetState extends State<FloatingAudioPiPWidget> {
 // =========================================================================
 // 🚀 LIVE SESSION ENTRY (join page)
 // =========================================================================
+// =========================================================================
+// 🔀 SECTION MERGE — keeps the student in the RIGHT class by itself
+//
+// Admin merges Section B into A (B's trainer is absent):
+//   • a B student already sitting in B's class is moved into A's class
+//   • unmerge → moved back to B (as soon as B's trainer has started)
+// Works while the class is full screen AND while it is minimized.
+// The server decides the class (prepare-call), the app only follows it.
+// =========================================================================
+class ClassSwitcher {
+  static Call? _call;
+  static LiveSessionWidget? _ref;
+  static String _userId = '';
+  static dynamic _socket;
+  static Timer? _attachTimer;
+  static Timer? _pollTimer;
+  static Timer? _debounce;
+  static bool _busy = false;
+  static Call? _switchingFrom;
+  static final Random _rnd = Random();
+
+  /// "A" while this student sits in another section's class (merge)
+  static final RxnString mergedInto = RxnString();
+
+  /// Unmerged, but the student's own trainer hasn't started yet → stays in the host class
+  static final RxBool waitingForOwnClass = false.obs;
+
+  static bool isSwitching(Call call) => identical(call, _switchingFrom);
+
+  static String get _ownSection {
+    try {
+      final u = Get.find<AuthController>().userData;
+      return (u['onlineSection'] ?? u['section'] ?? '').toString().toUpperCase();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static bool get _applies {
+    final r = _ref;
+    if (r == null || r.type != 'class' || r.language.toLowerCase() != 'english') return false;
+    try {
+      final mode = (Get.find<AuthController>().userData['mode'] ?? 'online').toString().toLowerCase();
+      if (mode != 'online') return false; // offline: no sections
+    } catch (_) {}
+    return ['A', 'B', 'C', 'D', 'E'].contains(_ownSection);
+  }
+
+  /// Called by the class screen when the student is in a call.
+  static void watch(Call call, LiveSessionWidget? ref, String userId, {String? mergedNow}) {
+    if (ref != null) _ref = ref;
+    _userId = userId;
+    if (mergedNow != null) mergedInto.value = mergedNow.isEmpty ? null : mergedNow;
+    if (identical(call, _call)) return;
+    _call = call;
+    if (!_applies) return;
+    _attachSocket();
+    _attachTimer?.cancel();
+    _attachTimer = Timer.periodic(const Duration(seconds: 10), (_) => _attachSocket());
+    _pollTimer?.cancel();
+    // safety net if a socket message is missed (cheap: one request / 30 s)
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) => check());
+    Future.delayed(const Duration(seconds: 2), check);
+  }
+
+  /// Student left the class for good.
+  static void stop() {
+    _attachTimer?.cancel();
+    _pollTimer?.cancel();
+    _debounce?.cancel();
+    _attachTimer = null;
+    _pollTimer = null;
+    try {
+      _socket?.off('merge_updated', _onMerge);
+      _socket?.off('class_started', _onStarted);
+    } catch (_) {}
+    _socket = null;
+    _call = null;
+    _busy = false;
+    mergedInto.value = null;
+    waitingForOwnClass.value = false;
+  }
+
+  static void _attachSocket() {
+    if (!Get.isRegistered<AuthController>()) return;
+    final s = Get.find<AuthController>().socket;
+    if (s == null || identical(s, _socket)) return;
+    try {
+      _socket?.off('merge_updated', _onMerge);
+      _socket?.off('class_started', _onStarted);
+    } catch (_) {}
+    _socket = s;
+    s.on('merge_updated', _onMerge);
+    s.on('class_started', _onStarted);
+  }
+
+  static bool _sameStage(dynamic data) {
+    final r = _ref;
+    if (r == null || data is! Map) return false;
+    return (data['stage'] ?? '').toString().toLowerCase().replaceAll(' ', '') ==
+        r.stage.toLowerCase().replaceAll(' ', '');
+  }
+
+  static void _onMerge(dynamic data) {
+    if (!_sameStage(data)) return;
+    final own = _ownSection;
+    final host = (data['hostSection'] ?? '').toString().toUpperCase();
+    final guests = (data['guestSections'] is List ? data['guestSections'] as List : const [])
+        .map((e) => e.toString().toUpperCase())
+        .toList();
+    if (own != host && !guests.contains(own)) return; // not my section
+    _debounce?.cancel();
+    // small random wait → 40 phones don't all ask the server in the same second
+    _debounce = Timer(Duration(milliseconds: 300 + _rnd.nextInt(1500)), check);
+  }
+
+  static void _onStarted(dynamic data) {
+    if (!waitingForOwnClass.value || !_sameStage(data)) return;
+    _debounce?.cancel();
+    _debounce = Timer(Duration(milliseconds: 300 + _rnd.nextInt(1200)), check);
+  }
+
+  /// Ask the server which class this student belongs in right now.
+  static Future<void> check() async {
+    final call = _call;
+    final r = _ref;
+    if (_busy || call == null || r == null || !_applies) return;
+    if (call.state.value.endedAt != null) return stop();
+    _busy = true;
+    try {
+      final res = await http
+          .post(
+            Uri.parse("${ApiEndpoints.baseUrl}/stream/prepare-call"),
+            headers: _authHeaders(json: true),
+            body: jsonEncode({
+              "userId": _userId,
+              "language": r.language,
+              "stage": r.stage,
+              "section": _ownSection.toLowerCase(),
+              "type": r.type,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return;
+      final data = jsonDecode(res.body);
+      if (data is! Map || data['assemblyActive'] == true) return;
+      final callId = (data['callId'] ?? '').toString();
+      final into = (data['mergedInto'] ?? '').toString();
+      if (callId.isEmpty) return;
+
+      if (callId == call.id) {
+        mergedInto.value = into.isEmpty ? null : into;
+        waitingForOwnClass.value = false;
+        return;
+      }
+      if (data['started'] != true) {
+        // e.g. unmerged, but Section B's trainer hasn't started yet → stay here for now
+        waitingForOwnClass.value = into.isEmpty;
+        return;
+      }
+      await _switchTo(callId, into);
+    } catch (e) {
+      debugPrint("Class switch check error: $e");
+    } finally {
+      _busy = false;
+    }
+  }
+
+  static Future<void> _switchTo(String callId, String into) async {
+    final old = _call;
+    final r = _ref;
+    if (old == null || r == null) return;
+    _switchingFrom = old;
+    final bool minimized = GlobalAudioOverlayController.currentCall != null;
+    final userName = (() {
+      try {
+        return (Get.find<AuthController>().userData['name'] ?? 'Student').toString();
+      } catch (_) {
+        return 'Student';
+      }
+    })();
+
+    try {
+      final client = await StreamManager.clientFor(userId: _userId, userName: userName);
+      try {
+        await old.leave();
+      } catch (_) {}
+
+      Call next = client.makeCall(callType: StreamCallType.defaultType(), id: callId);
+      await next.getOrCreate();
+      var joined = await next.join(
+        connectOptions: CallConnectOptions(camera: TrackOption.disabled(), microphone: TrackOption.disabled()),
+      );
+      if (joined.isFailure) {
+        // couldn't enter the new class → go back into the old one
+        debugPrint("Move failed: $joined");
+        next = client.makeCall(callType: StreamCallType.defaultType(), id: old.id);
+        await next.getOrCreate();
+        joined = await next.join(
+          connectOptions: CallConnectOptions(camera: TrackOption.disabled(), microphone: TrackOption.disabled()),
+        );
+        if (joined.isFailure) throw Exception("rejoin failed");
+      }
+      try {
+        await next.setCameraEnabled(enabled: false);
+        await next.setMicrophoneEnabled(enabled: false);
+      } catch (_) {}
+
+      _call = next;
+      final moved = next.id == callId;
+      if (moved) {
+        mergedInto.value = into.isEmpty ? null : into;
+        waitingForOwnClass.value = false;
+      }
+
+      if (minimized) {
+        // keep the floating bubble — just point it at the new class
+        GlobalAudioOverlayController.removeOverlay();
+        final ctx = Get.overlayContext ?? Get.context;
+        if (ctx != null) {
+          GlobalAudioOverlayController.showOverlay(ctx, next, _userId, "Live Class", widgetRef: r);
+        }
+      } else {
+        GlobalAudioOverlayController.removeOverlay();
+        Get.until((route) => route.isFirst);
+        Get.to(() => StudentAudioRoomScreen(call: next, widgetRef: r, userId: _userId, initialMuted: true));
+      }
+
+      if (moved) {
+        HapticFeedback.mediumImpact();
+        Get.snackbar(
+          into.isNotEmpty ? "Moved to Section $into's class" : "Back in your own class",
+          into.isNotEmpty
+              ? "Your trainer is away today, so Section ${_ownSection} joins Section $into. Your attendance still counts for Section ${_ownSection}."
+              : "Section ${_ownSection}'s trainer is back. You're in your own class again.",
+          backgroundColor: AppColors.navy,
+          colorText: Colors.white,
+          icon: const Icon(Icons.merge_type_rounded, color: Colors.white),
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+          duration: const Duration(seconds: 5),
+        );
+      }
+    } catch (e) {
+      debugPrint("Class switch error: $e");
+      Get.snackbar(
+        "Please join again",
+        "Your class changed (section merge). Open your stage and tap Join.",
+        backgroundColor: AppColors.error,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(14),
+      );
+      GlobalAudioOverlayController.removeOverlay();
+      StreamManager.inCall = false;
+      stop();
+      Get.until((route) => route.isFirst);
+    } finally {
+      Future.delayed(const Duration(seconds: 3), () {
+        if (identical(_switchingFrom, old)) _switchingFrom = null;
+      });
+    }
+  }
+}
+
 class LiveSessionWidget extends StatefulWidget {
   final String language;
   final String stage;
@@ -481,10 +762,23 @@ class _JoinFailed implements Exception {
   String toString() => reason;
 }
 
+/// After a failed join, Stream finishes leaving the call a moment later and
+/// stores the real reason in the call status. Wait for it (max 4 s).
+Future<String> _joinFailReason(Call call, Object result) async {
+  var status = "${call.state.value.status}";
+  for (var i = 0; i < 40 && !status.contains('Disconnected'); i++) {
+    await Future.delayed(const Duration(milliseconds: 100));
+    status = "${call.state.value.status}";
+  }
+  final text = "$result | $status";
+  return text.length > 600 ? text.substring(0, 600) : text;
+}
+
 class _ClassStatus {
   final String callId;
   final bool started;
-  const _ClassStatus(this.callId, this.started);
+  final String mergedInto; // "A" when this section is merged into Section A today
+  const _ClassStatus(this.callId, this.started, [this.mergedInto = '']);
 }
 
 class _PreparedClass {
@@ -499,8 +793,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
   bool joinMuted = true;
   Future<_PreparedClass>? _prep;
   bool _ready = false;
-
-  static final Map<String, String> _sectionCache = {};
+  String _mergedInto = ''; // last answer from the server
 
   bool get isDark => Get.isDarkMode;
   Color get accent => isDark ? AppColors.teal : AppColors.navy;
@@ -539,46 +832,15 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
     );
   }
 
-  Future<String> _resolveSection(String rawSection) async {
-    final key = "${widget.language}|${widget.stage}|$rawSection";
-    final cached = _sectionCache[key];
-    if (cached != null) return cached;
-    try {
-      final res = await http
-          .get(
-            Uri.parse(
-              "${ApiEndpoints.baseUrl}/admin/resolve-section?language=${widget.language}&stage=${widget.stage}&section=$rawSection",
-            ),
-            headers: _authHeaders(),
-          )
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final eff = data['effectiveSection']?.toString().toLowerCase();
-        if (eff != null && eff.isNotEmpty) {
-          _sectionCache[key] = eff;
-          return eff;
-        }
-      }
-    } catch (e) {
-      debugPrint("Resolve section error (using own section): $e");
-    }
-    return rawSection;
-  }
-
   Future<_PreparedClass> _prepare() async {
     final user = authController.userData;
     final String rawSection = (user['onlineSection'] ?? user['section'] ?? 'A')
         .toString()
         .toLowerCase();
 
-    final results = await Future.wait<Object>([
-      StreamManager.clientFor(userId: _userId, userName: _userName),
-      _resolveSection(rawSection),
-    ]);
-    final client = results[0] as StreamVideo;
-    final section = results[1] as String;
-    return _PreparedClass(client, section);
+    // 🔀 The server decides the class (own section, or the host section on a merge day)
+    final client = await StreamManager.clientFor(userId: _userId, userName: _userName);
+    return _PreparedClass(client, rawSection);
   }
 
   /// Asks the server for today's call id and whether the trainer has started.
@@ -602,7 +864,11 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
       throw _JoinFailed("Server: ${data['error'] ?? res.statusCode}");
     }
     if (data['memberError'] != null) debugPrint("Server memberError: ${data['memberError']}");
-    return _ClassStatus(data['callId'].toString(), data['started'] == true);
+    return _ClassStatus(
+      data['callId'].toString(),
+      data['started'] == true,
+      (data['mergedInto'] ?? '').toString().toUpperCase(),
+    );
   }
 
   Future<void> _join() async {
@@ -622,53 +888,43 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
 
       // Checked at tap time: has the trainer started today's class?
       final status = await _classStatus(p.section);
+      _mergedInto = status.mergedInto;
       if (!status.started) {
         _showNotStartedDialog();
         return;
       }
       final String callId = status.callId;
 
-      final options = CallConnectOptions(
-        microphone: joinMuted ? TrackOption.disabled() : TrackOption.enabled(),
-      );
-
-      // One step: join + mic setting (no getOrCreate, no mute-after-join)
-      var call = p.client.makeCall(
+      // load the call → join → set the mic (Stream 1.5 order)
+      final call = p.client.makeCall(
         callType: StreamCallType.defaultType(),
         id: callId,
       );
-      var result = await call.join(connectOptions: options);
+      final loaded = await call.getOrCreate();
+      if (loaded.isFailure) debugPrint("getOrCreate failed: $loaded");
 
+      // Stream retries 3 times inside join(). No extra retry here, so the
+      // REAL reason is not overwritten.
+      // 🎧 AUDIO ONLY: camera never turned on → no camera permission asked
+      final result = await call.join(
+        connectOptions: CallConnectOptions(
+          camera: TrackOption.disabled(),
+          microphone: joinMuted ? TrackOption.disabled() : TrackOption.enabled(),
+        ),
+      );
       if (result.isFailure) {
-        debugPrint("Join attempt 1 failed: $result");
-        // Stale connection / old call still open on this phone → fresh client, try once more
-        try {
-          await call.leave();
-        } catch (_) {}
-        await StreamManager.reset();
-        final client = await StreamManager.clientFor(
-          userId: _userId,
-          userName: _userName,
-        );
-        call = client.makeCall(
-          callType: StreamCallType.defaultType(),
-          id: callId,
-        );
-        result = await call.join();
-        if (result.isSuccess) {
-          try {
-            await call.setMicrophoneEnabled(enabled: !joinMuted);
-          } catch (_) {}
-        } else {
-          debugPrint("Join attempt 2 failed: $result");
-        }
+        final reason = await _joinFailReason(call, result);
+        debugPrint("❌ JOIN FAILED: $reason");
+        throw _JoinFailed(reason);
       }
-      if (result.isFailure) {
-        // The real reason is kept in the call's disconnect status
-        throw _JoinFailed("${call.state.value.status}");
-      }
+
+      try {
+        await call.setCameraEnabled(enabled: false); // audio class: never video
+        await call.setMicrophoneEnabled(enabled: !joinMuted);
+      } catch (_) {}
 
       GlobalAudioOverlayController.removeOverlay();
+      ClassSwitcher.watch(call, widget, _userId, mergedNow: status.mergedInto);
       Get.to(
         () => StudentAudioRoomScreen(
           call: call,
@@ -677,6 +933,18 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
           initialMuted: joinMuted,
         ),
       );
+      if (status.mergedInto.isNotEmpty) {
+        Get.snackbar(
+          "Today you're in Section ${status.mergedInto}'s class",
+          "Your trainer is away, so your section joins Section ${status.mergedInto}. Attendance still counts for your own section.",
+          backgroundColor: AppColors.navy,
+          colorText: Colors.white,
+          icon: const Icon(Icons.merge_type_rounded, color: Colors.white),
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+          duration: const Duration(seconds: 5),
+        );
+      }
     } on SocketException {
       _showNoInternetSnackbar();
     } on TimeoutException {
@@ -691,12 +959,12 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
         final reason = e is _JoinFailed ? e.reason : e.toString();
         Get.snackbar(
           "Could not join",
-          "Please try again in a moment.\n(${reason.length > 300 ? reason.substring(0, 300) : reason})",
+          "Please try again in a moment.\n(${reason})",
           backgroundColor: AppColors.error,
           colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM,
           margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 12),
         );
       }
       _startPrepare();
@@ -745,8 +1013,8 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
         ),
         content: Text(
           _ownSlot != null
-              ? "Your trainer hasn't started the class yet.\nYour class time is ${_ownSlot!.shortLabel}. Please join then."
-              : "Your trainer hasn't started the class yet. Please try again when the class starts.",
+              ? "${_mergedInto.isNotEmpty ? "Today your section joins Section $_mergedInto's class. Its trainer" : "Your trainer"} hasn't started the class yet.\nYour class time is ${_ownSlot!.shortLabel}. Please join then."
+              : "${_mergedInto.isNotEmpty ? "Today your section joins Section $_mergedInto's class. Its trainer" : "Your trainer"} hasn't started the class yet. Please try again when the class starts.",
           style: GoogleFonts.poppins(color: textMuted, fontSize: 13, height: 1.45),
         ),
         actions: [
@@ -827,22 +1095,36 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+            // Everything fits on one screen: compact cards on top, Join button
+            // always visible at the bottom. (Scrolls only on very small phones.)
+            child: Column(
               children: [
-                _heroCard(inCall),
-                const SizedBox(height: 14),
-                if (!inCall) ...[
-                  if (_outsideMyBatch) ...[
-                    _otherBatchCard(),
-                    const SizedBox(height: 12),
-                  ],
-                  _micChoice(),
-                  const SizedBox(height: 12),
-                  _rulesCard(),
-                  const SizedBox(height: 20),
-                ],
-                SizedBox(
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _heroCard(inCall),
+                        if (!inCall) ...[
+                          if (_outsideMyBatch) ...[
+                            const SizedBox(height: 10),
+                            _otherBatchCard(),
+                          ],
+                          const SizedBox(height: 10),
+                          _micChoice(),
+                          const SizedBox(height: 10),
+                          _rulesCard(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                  child: SizedBox(
+                  width: double.infinity,
                   height: 54,
                   child: ElevatedButton.icon(
                     onPressed: isLoading
@@ -877,7 +1159,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
                           : inCall
                           ? "Return to live class"
                           : _outsideMyBatch
-                          ? "Join anyway (no attendance)"
+                          ? "Join this class (other timing)"
                           : "Join live class",
                       style: GoogleFonts.poppins(
                         fontSize: 15,
@@ -895,6 +1177,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
                     ),
                   ),
                 ),
+                ),
               ],
             ),
           ),
@@ -905,27 +1188,27 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
 
   Widget _heroCard(bool inCall) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.navy, AppColors.navy.withOpacity(.82)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navy.withOpacity(.22),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+            color: AppColors.navy.withOpacity(.20),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
           Container(
-            width: 74,
-            height: 74,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(.14),
               shape: BoxShape.circle,
@@ -933,58 +1216,65 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
             child: Icon(
               inCall ? Icons.headset_rounded : Icons.headset_mic_rounded,
               color: Colors.white,
-              size: 36,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 14),
-          Text(
-            inCall ? "You're in a live class" : "Live audio class",
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "${widget.language} • ${widget.stage.toUpperCase()}",
-            style: GoogleFonts.poppins(
-              color: Colors.white.withOpacity(.75),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.14),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: inCall || _ready
-                        ? const Color(0xff12B76A)
-                        : const Color(0xffF7DF55),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 7),
                 Text(
-                  inCall
-                      ? "Connected"
-                      : _ready
-                      ? "Ready to join"
-                      : "Getting ready…",
+                  inCall ? "You're in a live class" : "Live audio class",
                   style: GoogleFonts.poppins(
                     color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                Text(
+                  "${widget.language} • ${widget.stage.toUpperCase()}",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white.withOpacity(.75),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: inCall || _ready
+                              ? const Color(0xff12B76A)
+                              : const Color(0xffF7DF55),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        inCall
+                            ? "Connected"
+                            : _ready
+                            ? "Ready to join"
+                            : "Getting ready…",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -998,7 +1288,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
   Widget _otherBatchCard() {
     final slot = _ownSlot;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: AppColors.warning.withOpacity(isDark ? .16 : .12),
         borderRadius: BorderRadius.circular(18),
@@ -1007,14 +1297,14 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.schedule_rounded, color: AppColors.warning, size: 22),
+          Icon(Icons.schedule_rounded, color: AppColors.warning, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Not your batch time",
+                  "Not your class timing",
                   style: GoogleFonts.poppins(
                     color: textMain,
                     fontSize: 13.5,
@@ -1023,7 +1313,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "Your class is ${slot?.shortLabel ?? ''}. You can listen now, but attendance counts only in your own batch.",
+                  "Your class is ${slot?.shortLabel ?? ''}. You can still join — attendance counts.",
                   style: GoogleFonts.poppins(
                     color: textMuted,
                     fontSize: 11.5,
@@ -1093,19 +1383,19 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
 
   Widget _rulesCard() {
     Widget rule(IconData icon, String text) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 17, color: accent),
+          Icon(icon, size: 16, color: accent),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: GoogleFonts.poppins(
                 color: textMuted,
-                fontSize: 11.5,
-                height: 1.4,
+                fontSize: 11,
+                height: 1.35,
               ),
             ),
           ),
@@ -1114,7 +1404,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
     );
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: surface2,
         borderRadius: BorderRadius.circular(18),
@@ -1123,11 +1413,11 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
       child: Column(
         children: [
           rule(Icons.lock_rounded,
-              "Your trainer may mute everyone. You can speak again when the trainer allows."),
+              "Trainer may mute everyone — speak when allowed."),
           rule(Icons.record_voice_over_rounded,
-              "During speaking practice you'll see “Your turn” when it's your chance to speak."),
+              "In speaking practice you'll see “Your turn”."),
           rule(Icons.phone_android_rounded,
-              "Keep the app open so your attendance minutes are counted."),
+              "Keep the app open so attendance minutes count."),
         ],
       ),
     );
@@ -1195,6 +1485,9 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     _sub = widget.call.state.asStream().listen(_onCallState);
     _onCallState(widget.call.state.value);
 
+    // 🔀 admin merges / unmerges sections → move to the right class by itself
+    ClassSwitcher.watch(widget.call, widget.widgetRef, widget.userId);
+
     _netTimer = Timer.periodic(const Duration(seconds: 8), (_) async {
       final connected = await _checkInternetConnection();
       if (mounted && connected == _isPoorConnection) {
@@ -1218,6 +1511,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
   // ---------------------------------------------------------------------
   void _onCallState(CallState s) {
     if (!mounted || _isExiting) return;
+    if (ClassSwitcher.isSwitching(widget.call)) return; // moving to another class — not a real exit
 
     if (s.endedAt != null) {
       _handleClassExit(message: "The trainer ended the class.");
@@ -1332,14 +1626,12 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data['outsideBatch'] == true) {
-          // Listening only: no attendance in another batch
-          if (mounted) {
-            setState(() => _outsideBatchOwn = data['ownBatch']?.toString() ?? '');
-          }
-          return;
+        if (data['outsideBatch'] == true && mounted) {
+          // Another timing: attendance still counts, shown as "joined another timing"
+          setState(() => _outsideBatchOwn = data['ownBatch']?.toString() ?? '');
         }
         _attendanceId = data['attendanceId']?.toString();
+        if (_attendanceId == null || _attendanceId!.isEmpty) return;
         _syncTimer?.cancel();
         _syncTimer = Timer.periodic(const Duration(minutes: 1), (_) => _syncOnline());
       } else {
@@ -1394,8 +1686,9 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
   }
 
   Future<void> _handleClassExit({String? message}) async {
-    if (_isExiting) return;
+    if (_isExiting || ClassSwitcher.isSwitching(widget.call)) return;
     _isExiting = true;
+    ClassSwitcher.stop();
     _missingTimer?.cancel();
 
     await _recordOnlineLeave();
@@ -1676,10 +1969,26 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                   constraints: const BoxConstraints(maxWidth: 720),
                   child: Column(
                     children: [
+                      Obx(() {
+                        final into = ClassSwitcher.mergedInto.value;
+                        if (ClassSwitcher.waitingForOwnClass.value) {
+                          return _banner(
+                            Icons.hourglass_top_rounded,
+                            "Your section is unmerged. You'll move to your own class as soon as your trainer starts it.",
+                            AppColors.warning,
+                          );
+                        }
+                        if (into == null || into.isEmpty) return const SizedBox.shrink();
+                        return _banner(
+                          Icons.merge_type_rounded,
+                          "Section merge: you're in Section $into's class today. Attendance counts for your own section.",
+                          AppColors.navy,
+                        );
+                      }),
                       if (_outsideBatchOwn != null)
                         _banner(
                           Icons.info_outline_rounded,
-                          "Listening only — your batch is ${BatchSlots.shortOf(_outsideBatchOwn, fallback: 'another time')}. No attendance now.",
+                          "Joined another timing — your batch is ${BatchSlots.shortOf(_outsideBatchOwn, fallback: 'another time')}. Attendance counted.",
                           AppColors.warning,
                         ),
                       if (callState.status.isReconnecting)

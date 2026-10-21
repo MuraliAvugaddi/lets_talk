@@ -6,6 +6,7 @@ import 'package:lets_talk/apis/batch_slots.dart';
 
 /// Signup step 3: choose the class timing (one of the 7 daily batches).
 /// Flow: Step 1 (details) → Step 2 (online/offline) → THIS → OTP → account created.
+/// All 7 timings fit on ONE screen (2 per row) — morning and evening visible together, no scrolling.
 class SignupBatchScreen extends GetView<AuthController> {
   const SignupBatchScreen({super.key});
 
@@ -55,67 +56,30 @@ class SignupBatchScreen extends GetView<AuthController> {
         child: Column(
           children: [
             Expanded(
+              // Fits on normal phones; scrolls only on very small screens as a safety net
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: surface,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: navy.withOpacity(0.07),
-                              blurRadius: 18,
-                              offset: const Offset(0, 7),
-                            ),
-                          ],
-                        ),
-                        child: Container(
-                          margin: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(color: navy, shape: BoxShape.circle),
-                          child: const Icon(Icons.schedule_rounded, color: yellow, size: 26),
-                        ),
-                      ),
-                    ),
+                    _header(isOnline),
+                    const SizedBox(height: 16),
+                    _periodHeader("Morning", "4 batches", Icons.wb_sunny_rounded, yellow),
+                    const SizedBox(height: 8),
+                    _grid(BatchSlots.morning),
                     const SizedBox(height: 14),
+                    _periodHeader("Evening", "3 batches", Icons.nights_stay_rounded, teal),
+                    const SizedBox(height: 8),
+                    _grid(BatchSlots.evening),
+                    const SizedBox(height: 10),
                     Center(
                       child: Text(
-                        "Choose Your Class Timing",
+                        "Every class is 90 minutes • You can change it later",
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          color: text,
-                          fontSize: 23,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                          letterSpacing: -0.4,
-                        ),
+                        style: GoogleFonts.poppins(color: textSecondary, fontSize: 10.5),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Center(
-                      child: Text(
-                        "Pick the batch you will attend every day. You can change it later from your profile.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: textSecondary, fontSize: 11.5, height: 1.45),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Center(child: _modeChip(isOnline)),
-                    const SizedBox(height: 20),
-                    _periodHeader("Morning", Icons.wb_sunny_rounded, yellow),
-                    const SizedBox(height: 9),
-                    ...BatchSlots.morning.map(_slotCard),
-                    const SizedBox(height: 14),
-                    _periodHeader("Evening", Icons.nights_stay_rounded, teal),
-                    const SizedBox(height: 9),
-                    ...BatchSlots.evening.map(_slotCard),
                   ],
                 ),
               ),
@@ -127,148 +91,204 @@ class SignupBatchScreen extends GetView<AuthController> {
     );
   }
 
+  // ---------------- compact header ----------------
+  Widget _header(bool isOnline) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: navy,
+            shape: BoxShape.circle,
+            border: Border.all(color: surface, width: 4),
+            boxShadow: [
+              BoxShadow(color: navy.withOpacity(0.10), blurRadius: 14, offset: const Offset(0, 5)),
+            ],
+          ),
+          child: const Icon(Icons.schedule_rounded, color: yellow, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Choose Your Class Timing",
+                style: GoogleFonts.poppins(
+                  color: text,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  _modeChip(isOnline),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      "Pick one batch",
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(color: textSecondary, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _modeChip(bool isOnline) {
     final color = isOnline ? navy : teal;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.09),
+        color: color.withOpacity(0.10),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(isOnline ? Icons.wifi_rounded : Icons.location_on_rounded, color: color, size: 13),
-          const SizedBox(width: 5),
+          Icon(isOnline ? Icons.wifi_rounded : Icons.location_on_rounded, color: color, size: 12),
+          const SizedBox(width: 4),
           Text(
-            isOnline ? "ONLINE STUDENT" : "OFFLINE STUDENT",
-            style: GoogleFonts.poppins(
-              color: color,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.7,
-            ),
+            isOnline ? "ONLINE" : "OFFLINE",
+            style: GoogleFonts.poppins(color: color, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.6),
           ),
         ],
       ),
     );
   }
 
-  Widget _periodHeader(String title, IconData icon, Color color) {
+  Widget _periodHeader(String title, String count, IconData icon, Color color) {
     return Row(
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 24,
+          height: 24,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.16),
-            borderRadius: BorderRadius.circular(8),
+            color: color.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(7),
           ),
-          child: Icon(icon, color: color == yellow ? deepNavy : color, size: 15),
+          child: Icon(icon, color: color == yellow ? deepNavy : color, size: 14),
         ),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.poppins(color: text, fontSize: 13, fontWeight: FontWeight.w700),
-        ),
+        Text(title, style: GoogleFonts.poppins(color: text, fontSize: 13, fontWeight: FontWeight.w700)),
+        const SizedBox(width: 6),
+        Text(count, style: GoogleFonts.poppins(color: textSecondary, fontSize: 10.5)),
       ],
     );
   }
 
-  Widget _slotCard(BatchSlot slot) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Obx(() {
-        final bool selected = controller.selectedBatch.value == slot.label;
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => controller.selectedBatch.value = slot.label,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-              decoration: BoxDecoration(
-                color: selected ? navy.withOpacity(0.07) : surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: selected ? navy : border, width: selected ? 1.5 : 1.1),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: selected ? navy : surfaceSoft,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: selected ? navy : border),
+  // ---------------- 2 timings per row ----------------
+  Widget _grid(List<BatchSlot> slots) {
+    final rows = <Widget>[];
+    for (var i = 0; i < slots.length; i += 2) {
+      rows.add(Padding(
+        padding: EdgeInsets.only(bottom: i + 2 < slots.length ? 8 : 0),
+        child: Row(
+          children: [
+            Expanded(child: _slotTile(slots[i])),
+            const SizedBox(width: 8),
+            Expanded(child: i + 1 < slots.length ? _slotTile(slots[i + 1]) : const SizedBox.shrink()),
+          ],
+        ),
+      ));
+    }
+    return Column(children: rows);
+  }
+
+  /// "5:30 AM" big, "till 7:00 AM" small — also correct for 10:30 AM – 12:00 PM
+  Widget _slotTile(BatchSlot slot) {
+    final String startText = '${slot.start} ${slot.period}';
+    final String endText = '${slot.end} ${slot.endPeriod ?? slot.period}';
+
+    return Obx(() {
+      final bool selected = controller.selectedBatch.value == slot.label;
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => controller.selectedBatch.value = slot.label,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: selected ? navy : surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: selected ? navy : border, width: selected ? 1.5 : 1.1),
+              boxShadow: selected
+                  ? [BoxShadow(color: navy.withOpacity(0.22), blurRadius: 12, offset: const Offset(0, 5))]
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: selected ? Colors.white.withOpacity(0.15) : surfaceSoft,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: selected ? Colors.white24 : border),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    "${slot.number}",
+                    style: GoogleFonts.poppins(
+                      color: selected ? yellow : text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "BATCH",
-                          style: GoogleFonts.poppins(
-                            color: selected ? yellow : textSecondary,
-                            fontSize: 6.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          "${slot.number}",
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          startText,
                           style: GoogleFonts.poppins(
                             color: selected ? Colors.white : text,
                             fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            height: 1.05,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "${slot.start} – ${slot.end} ${slot.period}",
-                          style: GoogleFonts.poppins(
-                            color: text,
-                            fontSize: 15,
                             fontWeight: FontWeight.w700,
+                            height: 1.15,
                           ),
                         ),
-                        Text(
-                          "90-minute class",
-                          style: GoogleFonts.poppins(color: textSecondary, fontSize: 10),
+                      ),
+                      Text(
+                        "till $endText",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          color: selected ? Colors.white70 : textSecondary,
+                          fontSize: 10.5,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: selected ? teal : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: selected ? teal : border, width: 1.6),
-                    ),
-                    child: selected
-                        ? const Icon(Icons.check_rounded, color: Colors.white, size: 15)
-                        : null,
-                  ),
-                ],
-              ),
+                ),
+                if (selected) const Icon(Icons.check_circle_rounded, color: teal, size: 18),
+              ],
             ),
           ),
-        );
-      }),
-    );
+        ),
+      );
+    });
   }
 
+  // ---------------- bottom button ----------------
   Widget _bottomBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),

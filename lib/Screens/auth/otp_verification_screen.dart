@@ -48,7 +48,10 @@ class OtpVerificationScreen extends GetView<AuthController> {
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => Get.back(),
+                onTap: () {
+                  controller.cancelOtpAutoRead(); // stop waiting for the SMS
+                  Get.back();
+                },
                 child: const SizedBox(
                   width: 40,
                   height: 40,
@@ -305,6 +308,9 @@ class OtpVerificationScreen extends GetView<AuthController> {
 
                         keyboardType: TextInputType.number,
 
+                        // 📩 iPhone: shows "From Messages 123456" above the keyboard
+                        autofillHints: const [AutofillHints.oneTimeCode],
+
                         autofocus: true,
 
                         scrollPadding: const EdgeInsets.only(bottom: 120),
@@ -333,6 +339,43 @@ class OtpVerificationScreen extends GetView<AuthController> {
                         fontSize: 9.8,
                       ),
                     ),
+
+                    const SizedBox(height: 10),
+
+                    // ==================================================
+                    // 📩 RESEND (60 s wait — each SMS costs money)
+                    // ==================================================
+                    Obx(() {
+                      final wait = controller.resendIn.value;
+                      final busy = controller.isLoading.value;
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Didn't get the code? ",
+                            style: GoogleFonts.poppins(color: textSecondary, fontSize: 11),
+                          ),
+                          if (wait > 0)
+                            Text(
+                              "Resend in 0:${wait.toString().padLeft(2, '0')}",
+                              style: GoogleFonts.poppins(color: textSecondary, fontSize: 11, fontWeight: FontWeight.w700),
+                            )
+                          else
+                            GestureDetector(
+                              onTap: busy ? null : controller.resendOtp,
+                              child: Text(
+                                "Resend code",
+                                style: GoogleFonts.poppins(
+                                  color: busy ? textSecondary : navy,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
 
                     const SizedBox(height: 16),
 

@@ -8,9 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/connectivityController.dart';
+import 'package:lets_talk/Controllers/promoController.dart';
+import 'package:lets_talk/Controllers/classModeController.dart';
+import 'package:lets_talk/Screens/widgets/assembly_join_screen.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
-import 'package:in_app_update/in_app_update.dart';
+import 'package:lets_talk/services/app_update_checker.dart';
+import 'package:lets_talk/services/class_reminder.dart';
 
 // ============================================================
 // ENGLISH STAGE SCREENS
@@ -62,41 +66,15 @@ void _showNoInternetSnackbar() {
 }
 
 // ============================================================
-// IN-APP UPDATE
+// 📲 APP UPDATE — "New version available" popup (Android + iPhone)
+// The admin sets the newest version in the admin app (sidebar → App Update).
 // ============================================================
 
 class UpdateController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    checkAppUpdate();
-  }
-
-  Future<void> checkAppUpdate() async {
-    try {
-      final AppUpdateInfo updateInfo = await InAppUpdate.checkForUpdate();
-
-      if (updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
-        if (updateInfo.immediateUpdateAllowed) {
-          InAppUpdate.performImmediateUpdate().catchError((e) {
-            Get.snackbar(
-              'Update Failed',
-              e.toString(),
-              snackPosition: SnackPosition.BOTTOM,
-            );
-            return AppUpdateResult.userDeniedUpdate;
-          });
-        } else if (updateInfo.flexibleUpdateAllowed) {
-          InAppUpdate.startFlexibleUpdate().then((result) {
-            if (result == AppUpdateResult.success) {
-              InAppUpdate.completeFlexibleUpdate();
-            }
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('In-App Update error: $e');
-    }
+    AppUpdateChecker.check(force: true);
   }
 }
 
@@ -124,6 +102,8 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
     if (!Get.isRegistered<UpdateController>()) {
       Get.put(UpdateController());
     }
+    PromoController.to; // 🎬 posters & reels popup
+    ClassModeController.to; // 🌐 offline-online day / 🎙 special class
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAllData();
@@ -138,8 +118,16 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      PromoController.to.onPaused();
+    }
     if (state == AppLifecycleState.resumed) {
+      PromoController.to.onResumed();
       _refreshAllData();
+      // ⏰ back from Settings ("Alarms & reminders" turned on) → reminders on the exact minute
+      ClassReminder.refresh(authController.userData);
+      // 📲 a new version may have been released while the app was in the background
+      AppUpdateChecker.check();
     }
   }
 
@@ -153,41 +141,24 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
     await Future.wait([
       authController.refreshProfile(),
       fetchAdminNotification(),
+      ClassModeController.to.fetch(),
     ]);
 
     if (mounted) {
       setState(() {});
+      _showPromoPopup();
     }
   }
 
-  Future<void> fetchAdminNotification() async {
-    try {
-      // 1. Get current logged-in student's mode
-      final rawMode = authController.userData['mode']?.toString().toLowerCase().trim();
-      final String userMode = (rawMode == 'offline') ? 'offline' : 'online';
-
-      // 2. Request notice strictly for this mode
-      final response = await http.get(
-        Uri.parse('${ApiEndpoints.userNotification}?mode=$userMode'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // Verify notification explicitly belongs to this student's mode
-        if (data['hasNotification'] == true &&
-            data['targetMode']?.toString().toLowerCase() == userMode) {
-          authController.adminMessage.value = data['message']?.toString();
-          authController.isMessageVisible.value = true;
-        } else {
-          authController.adminMessage.value = null;
-          authController.isMessageVisible.value = false;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching mode-specific notification: $e');
-    }
+  // 🎬 Admin poster / reel popup (once per app open, X closes it)
+  void _showPromoPopup() {
+    final rawMode = authController.userData['mode']?.toString().toLowerCase().trim();
+    final String userMode = (rawMode == 'offline') ? 'offline' : 'online';
+    PromoController.to.showIfNeeded(context, mode: userMode);
   }
+
+  // 📢 Manager notice — AuthController keeps it live (socket + 30 s check)
+  Future<void> fetchAdminNotification() => authController.fetchNotice();
 
   bool _isStageLocked(String stageKey) {
     final english = authController.userData['englishAccess'];
@@ -627,6 +598,10 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
             .toString()
             .toLowerCase() ==
         'online';
+    final classMode = ClassModeController.to;
+    // 🌧 Rain day: offline students get the online class buttons too
+    final bool rainForMe = !isOnlineStudent && classMode.rainOn;
+    final bool showOnlineClasses = isOnlineStudent || rainForMe;
 
     final int unlocked = _unlockedStages();
     final int progressPercent = ((unlocked / 7) * 100).round();
@@ -738,6 +713,10 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (classMode.assemblyOn) _buildAssemblyCard(),
+
+        if (rainForMe) _buildRainNotice(),
+
         if (authController.adminMessage.value != null &&
             authController.isMessageVisible.value)
           _buildAdminNotice(
@@ -760,7 +739,7 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 18),
 
-        if (isOnlineStudent)
+        if (showOnlineClasses)
           _buildInteractiveClasses(
             context: context,
             isDark: isDark,
@@ -769,7 +748,7 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
             onlineClassesData: onlineClassesData,
           ),
 
-        if (isOnlineStudent) const SizedBox(height: 20),
+        if (showOnlineClasses) const SizedBox(height: 20),
 
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -844,6 +823,85 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
     );
   }
 
+  // 🎙 Special class card (everyone joins one class)
+  Widget _buildAssemblyCard() {
+    final cm = ClassModeController.to;
+    return GestureDetector(
+      onTap: () => Get.to(() => AssemblyJoinScreen(title: cm.assemblyTitle, startTime: cm.assemblyTime)),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF7B2FF7), Color(0xFFD6336C)]),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFFD6336C).withValues(alpha: 0.25), blurRadius: 14, offset: const Offset(0, 5)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(13)),
+              child: const Icon(Icons.record_voice_over_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(cm.assemblyTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+                  Text(
+                    'Today ${cm.assemblyTime.isNotEmpty ? 'at ${cm.assemblyTime} ' : ''}• all students join one class',
+                    maxLines: 2,
+                    style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.85), fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Text('Join',
+                  style: GoogleFonts.poppins(color: const Color(0xFF7B2FF7), fontSize: 12, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🌐 Offline classes online today (reason from admin)
+  Widget _buildRainNotice() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+      decoration: BoxDecoration(
+        color: AppColors.blue.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.blue.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        children: [
+          const Text('🌐', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
+              style: GoogleFonts.poppins(color: AppColors.blue, fontSize: 10.5, fontWeight: FontWeight.w600, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAdminNotice({
     required BuildContext context,
     required bool isDark,
@@ -851,7 +909,9 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
     required Color text,
     required Color secondary,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _showFullNotice(text: text, secondary: secondary, surface: surface),
+      child: Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
@@ -898,7 +958,7 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
                 const SizedBox(height: 1),
                 Text(
                   authController.adminMessage.value ?? '',
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     color: secondary,
@@ -912,12 +972,64 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
           IconButton(
             visualDensity: VisualDensity.compact,
             splashRadius: 18,
-            onPressed: () {
-              authController.isMessageVisible.value = false;
-            },
+            onPressed: authController.dismissNotice, // stays closed until a NEW notice is posted
             icon: Icon(Icons.close_rounded, color: secondary, size: 18),
           ),
         ],
+      ),
+    ),
+    );
+  }
+
+  /// Tap the notice → read the whole message
+  void _showFullNotice({required Color text, required Color secondary, required Color surface}) {
+    final msg = authController.adminMessage.value ?? '';
+    if (msg.isEmpty) return;
+    Get.dialog(
+      Dialog(
+        backgroundColor: surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.yellow.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.campaign_rounded, color: AppColors.yellow, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('Notice from Manager',
+                      style: GoogleFonts.poppins(color: text, fontSize: 15, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+                child: SingleChildScrollView(
+                  child: Text(msg, style: GoogleFonts.poppins(color: text, fontSize: 13, height: 1.5)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Get.back(),
+                  child: Text('OK', style: GoogleFonts.poppins(color: AppColors.navy, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

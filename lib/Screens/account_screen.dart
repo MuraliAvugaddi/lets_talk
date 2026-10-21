@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -373,172 +375,217 @@ class _AccountScreenState extends State<AccountScreen> {
                       .toString();
                   final isOnline = mode.toLowerCase() == "online";
 
+                  // ---- numbers for the quick-stats row ----
+                  int stagesOn(dynamic m) => m is Map ? m.values.where((v) => v == true).length : 0;
+                  final en = stagesOn(controller.userData['englishAccess']);
+                  final hi = stagesOn(controller.userData['hindiAccess']);
+                  final feePaid = (controller.userData['feeStatus'] ?? '').toString() == 'paid';
+                  final joined = DateTime.tryParse((controller.userData['createdAt'] ?? '').toString())?.toLocal();
+                  final initials = name
+                      .trim()
+                      .split(RegExp(r'\s+'))
+                      .where((w) => w.isNotEmpty)
+                      .take(2)
+                      .map((w) => w[0].toUpperCase())
+                      .join();
+
+                  Widget stat(String value, String label, IconData icon) => Expanded(
+                        child: Column(
+                          children: [
+                            Icon(icon, color: Colors.white.withOpacity(0.85), size: 18),
+                            const SizedBox(height: 4),
+                            Text(value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, height: 1.1)),
+                            Text(label,
+                                style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.75), fontSize: 10, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      );
+
+                  Widget chip(IconData icon, String text) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.16),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.25)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 13, color: Colors.white),
+                            const SizedBox(width: 5),
+                            Text(text,
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                          ],
+                        ),
+                      );
+
+                  // 🌟 Big, colourful profile card
                   return Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(28),
-                      color: isDark ? AppColors.darkSurface : AppColors.surface,
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.teal.withOpacity(0.28)
-                            : AppColors.navy.withOpacity(0.10),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0E466D), Color(0xFF155A88), Color(0xFF1F9BA6)],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.navy.withOpacity(
-                            isDark ? 0.25 : 0.10,
-                          ),
-                          blurRadius: isDark ? 24 : 18,
-                          offset: const Offset(0, 8),
+                          color: AppColors.navy.withOpacity(isDark ? 0.35 : 0.28),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 88,
-                          height: 88,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [AppColors.teal, AppColors.yellow],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        children: [
+                          // soft decorative circles
+                          Positioned(
+                            right: -40,
+                            top: -40,
+                            child: Container(
+                              width: 150,
+                              height: 150,
+                              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.07)),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.teal.withOpacity(0.22),
-                                blurRadius: 18,
-                              ),
-                            ],
                           ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark
-                                  ? AppColors.darkSurface
-                                  : AppColors.background,
+                          Positioned(
+                            left: -30,
+                            bottom: -50,
+                            child: Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.yellow.withOpacity(0.10)),
                             ),
-                            child: Center(
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : "U",
-                                style: GoogleFonts.poppins(
-                                  color: AppColors.teal,
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w800,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    // avatar with teal → yellow ring
+                                    Container(
+                                      width: 82,
+                                      height: 82,
+                                      padding: const EdgeInsets.all(3.5),
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [AppColors.teal, AppColors.yellow],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Container(
+                                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          initials.isEmpty ? "U" : initials,
+                                          style: GoogleFonts.poppins(
+                                            color: AppColors.navy,
+                                            fontSize: initials.length > 1 ? 26 : 32,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Hello 👋',
+                                            style: GoogleFonts.poppins(
+                                                color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.w500),
+                                          ),
+                                          Text(
+                                            name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w800,
+                                              height: 1.15,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.phone_rounded, size: 13, color: Colors.white.withOpacity(0.8)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                phone,
+                                                style: GoogleFonts.poppins(
+                                                    color: Colors.white.withOpacity(0.85), fontSize: 12.5, fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          name,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(
-                            color: heroTextColor,
-                            fontSize: 21,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          phone,
-                          style: GoogleFonts.poppins(
-                            color: heroSecondaryText,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.navy.withOpacity(
-                              isDark ? 0.12 : 0.07,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.verified_rounded,
-                                size: 13,
-                                color: isDark ? AppColors.teal : AppColors.navy,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                "LET'S SPEAK MEMBER",
-                                style: GoogleFonts.poppins(
-                                  color: isDark
-                                      ? AppColors.teal
-                                      : AppColors.navy,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
+                                const SizedBox(height: 14),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: [
+                                      chip(isOnline ? Icons.wifi_rounded : Icons.location_on_rounded,
+                                          isOnline ? 'ONLINE STUDENT' : 'OFFLINE STUDENT'),
+                                      chip(Icons.verified_rounded, "LET'S SPEAK MEMBER"),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 13,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isOnline
-                                ? AppColors.teal.withOpacity(0.12)
-                                : AppColors.yellow.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: isOnline
-                                  ? AppColors.teal.withOpacity(0.42)
-                                  : AppColors.yellow.withOpacity(0.50),
+                                const SizedBox(height: 16),
+                                // quick stats
+                                Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      stat('${en + hi}', 'Classes', Icons.school_rounded),
+                                      Container(width: 1, height: 36, color: Colors.white24),
+                                      stat(
+                                        en > 0 && hi > 0 ? 'Eng + Hin' : (hi > 0 ? 'Hindi' : 'English'),
+                                        'Course',
+                                        Icons.translate_rounded,
+                                      ),
+                                      Container(width: 1, height: 36, color: Colors.white24),
+                                      stat(feePaid ? 'Paid ✓' : 'Due', 'This month', Icons.account_balance_wallet_rounded),
+                                    ],
+                                  ),
+                                ),
+                                if (joined != null) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Learning with us since ${DateFormat('d MMM yyyy').format(joined)}',
+                                    style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.7), fontSize: 10.5),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isOnline
-                                    ? Icons.wifi_rounded
-                                    : Icons.location_on_rounded,
-                                size: 14,
-                                color: isOnline
-                                    ? AppColors.teal
-                                    : AppColors.yellow,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                "${mode.toUpperCase()} STUDENT",
-                                style: GoogleFonts.poppins(
-                                  color: isOnline
-                                      ? AppColors.teal
-                                      : AppColors.yellow,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.9,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 }),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // ⏰ CLASS TIMING — one timing per enabled stage (Stage 1 morning, Stage 2 evening…)
                 Obx(() {
@@ -550,7 +597,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   return _stageTimingsCard(context, stages);
                 }),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 _sectionLabel(
                   context,
@@ -827,6 +874,26 @@ class _AccountScreenState extends State<AccountScreen> {
     return out;
   }
 
+  Widget _miniChip(IconData icon, String text, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+            Text(
+              text,
+              style: GoogleFonts.poppins(color: color, fontSize: 8.5, fontWeight: FontWeight.w800, letterSpacing: 0.6),
+            ),
+          ],
+        ),
+      );
+
+  /// ONE tap row: "My class timings • 7 classes" → opens the full timings page
   Widget _stageTimingsCard(
     BuildContext context,
     List<_StageTiming> stages,
@@ -834,105 +901,91 @@ class _AccountScreenState extends State<AccountScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final textColor = theme.colorScheme.onSurface;
+    final missing = stages.where((s) => BatchSlots.find(s.timing) == null).length;
+    final en = stages.where((s) => s.language == 'English').length;
+    final hi = stages.length - en;
+    final next = _nextClass(stages);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 6),
-      decoration: BoxDecoration(
-        color: isDark ? theme.cardColor : const Color(0xFFF7FBFD),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.teal.withOpacity(0.30)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.schedule_rounded, color: AppColors.teal, size: 17),
-              const SizedBox(width: 6),
-              Text(
-                "MY CLASS TIMINGS",
-                style: GoogleFonts.poppins(
-                  color: textColor.withOpacity(0.60),
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.9,
-                ),
-              ),
-            ],
+    final subtitle = missing > 0
+        ? '$missing timing${missing == 1 ? '' : 's'} not set — tap to choose'
+        : next != null
+            ? 'Next: ${next.$1} at ${next.$2}'
+            : [if (en > 0) 'English $en', if (hi > 0) 'Hindi $hi'].join(' • ');
+    final accent = missing > 0 ? AppColors.yellow : AppColors.teal;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Get.to(() => _MyTimingsPage(
+              stages: _enabledStages,
+              onChange: (ctx, st) => _showBatchPicker(ctx, language: st.language, stage: st.stage, title: st.title),
+            )),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+          decoration: BoxDecoration(
+            color: isDark ? theme.cardColor : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accent.withOpacity(missing > 0 ? 0.7 : 0.35)),
           ),
-          const SizedBox(height: 6),
-          ...stages.map((st) {
-            final slot = BatchSlots.find(st.timing);
-            return InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _showBatchPicker(context, language: st.language, stage: st.stage, title: st.title),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: accent.withOpacity(0.14), borderRadius: BorderRadius.circular(13)),
+                child: Icon(Icons.schedule_rounded,
+                    color: missing > 0 ? (isDark ? AppColors.yellow : AppColors.deepNavy) : AppColors.teal, size: 23),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: (slot == null ? AppColors.yellow : AppColors.teal).withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        slot == null ? "?" : "${slot.number}",
-                        style: GoogleFonts.poppins(
-                          color: slot == null
-                              ? (isDark ? AppColors.yellow : AppColors.deepNavy)
-                              : AppColors.teal,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            st.title,
-                            style: GoogleFonts.poppins(
-                              color: textColor.withOpacity(0.62),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            slot == null ? "Timing not set" : slot.shortLabel,
-                            style: GoogleFonts.poppins(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      slot == null ? "CHOOSE" : "CHANGE",
-                      style: GoogleFonts.poppins(
-                        color: slot == null
-                            ? (isDark ? AppColors.yellow : AppColors.deepNavy)
-                            : AppColors.teal,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.35), size: 20),
+                    Text('My class timings',
+                        style: GoogleFonts.poppins(color: textColor, fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(color: textColor.withOpacity(0.6), fontSize: 11)),
                   ],
                 ),
               ),
-            );
-          }),
-        ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(color: accent.withOpacity(0.14), borderRadius: BorderRadius.circular(20)),
+                child: Text('${stages.length} class${stages.length == 1 ? '' : 'es'}',
+                    style: GoogleFonts.poppins(
+                        color: missing > 0 ? (isDark ? AppColors.yellow : AppColors.deepNavy) : AppColors.teal,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800)),
+              ),
+              Icon(Icons.chevron_right_rounded, color: textColor.withOpacity(0.4)),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  /// Today's next class ("Hindi S2", "10:30 AM") or null
+  (String, String)? _nextClass(List<_StageTiming> stages) {
+    final now = DateTime.now();
+    if (now.weekday == DateTime.sunday) return null;
+    final mins = now.hour * 60 + now.minute;
+    _StageTiming? best;
+    BatchSlot? bestSlot;
+    for (final st in stages) {
+      final slot = BatchSlots.find(st.timing);
+      if (slot == null || slot.startMinutes + 90 < mins) continue; // already finished
+      if (bestSlot == null || slot.startMinutes < bestSlot.startMinutes) {
+        best = st;
+        bestSlot = slot;
+      }
+    }
+    if (best == null || bestSlot == null) return null;
+    final short = '${best.language == 'Hindi' ? 'Hindi' : 'English'} Stage ${best.stage.replaceAll('stage', '')}';
+    return (short, '${bestSlot.start} ${bestSlot.period}');
   }
 
   Widget _classTimingCard(BuildContext context, BatchSlot? slot) {
@@ -1046,230 +1099,326 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
+  /// One sheet for every stage: stage tabs on top (if more than one), all 7 timings in a
+  /// 2-column grid (no scrolling), and the sheet CLOSES as soon as the timing is saved.
   void _showBatchPicker(BuildContext context, {String? language, String? stage, String? title}) {
     final all = _enabledStages();
+    String? selLanguage = language;
+    String? selStage = stage;
+
     String currentFor() {
-      if (stage == null) return BatchSlots.labelOf(controller.userData['batchTime']);
-      for (final st in all) {
-        if (st.language == language && st.stage == stage) return st.timing;
+      if (selStage == null) return BatchSlots.labelOf(controller.userData['batchTime']);
+      for (final st in _enabledStages()) {
+        if (st.language == selLanguage && st.stage == selStage) return st.timing;
       }
       return '';
     }
 
     // Timings used by my OTHER stages can't be picked (can't attend two classes at once)
-    final taken = <String, String>{};
-    if (stage != null) {
-      for (final st in all) {
-        if (st.language == language && st.stage == stage) continue;
+    Map<String, String> takenFor() {
+      final taken = <String, String>{};
+      if (selStage == null) return taken;
+      for (final st in _enabledStages()) {
+        if (st.language == selLanguage && st.stage == selStage) continue;
         if (st.timing.isNotEmpty) taken.putIfAbsent(st.timing, () => st.title);
       }
+      return taken;
     }
 
     String tempSelected = currentFor();
+    final bothLanguages = all.map((s) => s.language).toSet().length > 1;
 
     Get.bottomSheet(
       StatefulBuilder(
-        builder: (context, setSheetState) {
-          final theme = Theme.of(context);
+        builder: (sheetContext, setSheetState) {
+          final theme = Theme.of(sheetContext);
           final isDark = theme.brightness == Brightness.dark;
           final textColor = theme.colorScheme.onSurface;
           final current = currentFor();
+          final taken = takenFor();
 
           Widget slotTile(BatchSlot slot) {
             final bool selected = tempSelected == slot.label;
             final bool isCurrent = current == slot.label;
             final String? usedBy = taken[slot.label];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: usedBy != null ? null : () => setSheetState(() => tempSelected = slot.label),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                  decoration: BoxDecoration(
+            final bool blocked = usedBy != null;
+            final String endText = '${slot.end} ${slot.endPeriod ?? slot.period}';
+            return InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: blocked ? null : () => setSheetState(() => tempSelected = slot.label),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                height: 58,
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.teal
+                      : blocked
+                          ? (isDark ? AppColors.darkSurface2 : AppColors.surfaceSoft).withOpacity(0.5)
+                          : (isDark ? AppColors.darkSurface2 : AppColors.surfaceSoft),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
                     color: selected
-                        ? AppColors.teal.withOpacity(0.12)
-                        : (isDark ? AppColors.darkSurface2 : AppColors.surfaceSoft),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: selected ? AppColors.teal : AppColors.teal.withOpacity(0.14),
-                      width: selected ? 1.5 : 1,
-                    ),
+                        ? AppColors.teal
+                        : isCurrent
+                            ? AppColors.navy.withOpacity(0.45)
+                            : AppColors.teal.withOpacity(0.14),
+                    width: selected || isCurrent ? 1.5 : 1,
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selected ? AppColors.teal : AppColors.navy.withOpacity(0.10),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          "${slot.number}",
-                          style: GoogleFonts.poppins(
-                            color: selected ? Colors.white : textColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: selected ? Colors.white.withOpacity(0.22) : AppColors.navy.withOpacity(0.08),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              slot.shortLabel,
+                      child: blocked
+                          ? Icon(Icons.lock_rounded, size: 13, color: textColor.withOpacity(0.35))
+                          : Text(
+                              "${slot.number}",
                               style: GoogleFonts.poppins(
-                                color: usedBy != null ? textColor.withOpacity(0.35) : textColor,
+                                color: selected ? Colors.white : textColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "${slot.start} ${slot.period}",
+                              style: GoogleFonts.poppins(
+                                color: selected
+                                    ? Colors.white
+                                    : blocked
+                                        ? textColor.withOpacity(0.35)
+                                        : textColor,
                                 fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
+                                height: 1.15,
                               ),
                             ),
-                            if (usedBy != null)
-                              Text(
-                                "Used by $usedBy",
-                                style: GoogleFonts.poppins(
-                                  color: AppColors.error,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (isCurrent)
-                        Container(
-                          margin: const EdgeInsets.only(right: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.navy.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(7),
                           ),
-                          child: Text(
-                            "CURRENT",
+                          Text(
+                            blocked
+                                ? "Used by ${(usedBy ?? '').replaceAll('English • ', '').replaceAll('Hindi • ', 'Hindi ')}"
+                                : isCurrent
+                                    ? "Current • till $endText"
+                                    : "till $endText",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.poppins(
-                              color: isDark ? AppColors.teal : AppColors.navy,
-                              fontSize: 8,
-                              fontWeight: FontWeight.w800,
+                              color: selected
+                                  ? Colors.white.withOpacity(0.85)
+                                  : blocked
+                                      ? AppColors.error.withOpacity(0.8)
+                                      : isCurrent
+                                          ? (isDark ? AppColors.teal : AppColors.navy)
+                                          : textColor.withOpacity(0.55),
+                              fontSize: 9.5,
+                              fontWeight: isCurrent || blocked ? FontWeight.w700 : FontWeight.w500,
                             ),
                           ),
-                        ),
-                      Icon(
-                        selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                        color: selected ? AppColors.teal : textColor.withOpacity(0.35),
-                        size: 20,
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    if (selected) const Icon(Icons.check_circle_rounded, color: Colors.white, size: 17),
+                  ],
                 ),
               ),
             );
           }
 
-          Widget periodTitle(String title) => Padding(
-                padding: const EdgeInsets.only(bottom: 7, top: 4),
-                child: Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    color: textColor.withOpacity(0.60),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                  ),
+          Widget grid(List<BatchSlot> slots) {
+            final rows = <Widget>[];
+            for (var i = 0; i < slots.length; i += 2) {
+              rows.add(Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(child: slotTile(slots[i])),
+                    const SizedBox(width: 8),
+                    Expanded(child: i + 1 < slots.length ? slotTile(slots[i + 1]) : const SizedBox.shrink()),
+                  ],
+                ),
+              ));
+            }
+            return Column(children: rows);
+          }
+
+          Widget periodTitle(String t, IconData icon) => Padding(
+                padding: const EdgeInsets.only(bottom: 6, top: 2),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 13, color: textColor.withOpacity(0.5)),
+                    const SizedBox(width: 5),
+                    Text(
+                      t,
+                      style: GoogleFonts.poppins(
+                        color: textColor.withOpacity(0.60),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
                 ),
               );
 
+          final stageTitle = selStage == null
+              ? "Change Class Timing"
+              : "${selLanguage ?? ''} • Stage ${selStage!.replaceAll('stage', '')}";
+
           return Container(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
             decoration: BoxDecoration(
               color: theme.cardColor,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: SafeArea(
               top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: textColor.withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    title == null ? "Change Class Timing" : "Timing for $title",
-                    style: GoogleFonts.poppins(color: textColor, fontSize: 17, fontWeight: FontWeight.w800),
-                  ),
-                  Text(
-                    stage == null
-                        ? "Your trainer and attendance will follow the new batch."
-                        : "Only this stage changes. Timings of your other stages are blocked.",
-                    style: GoogleFonts.poppins(color: textColor.withOpacity(0.60), fontSize: 11.5),
-                  ),
-                  const SizedBox(height: 12),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          periodTitle("MORNING"),
-                          ...BatchSlots.morning.map(slotTile),
-                          periodTitle("EVENING"),
-                          ...BatchSlots.evening.map(slotTile),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(() {
-                    final saving = controller.isSavingBatch.value;
-                    final unchanged = tempSelected.isEmpty || tempSelected == current;
-                    return SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: (saving || unchanged)
-                            ? null
-                            : () async {
-                                final ok = await controller.updateBatchTime(
-                                  tempSelected,
-                                  language: language,
-                                  stage: stage,
-                                );
-                                if (ok && (Get.isBottomSheetOpen ?? false)) Get.back();
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.navy,
-                          disabledBackgroundColor: AppColors.navy.withOpacity(0.40),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: SingleChildScrollView(
+                // fits on normal phones; scrolls only on very small screens
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: textColor.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: saving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
-                              )
-                            : Text(
-                                unchanged ? "Select a new timing" : "Save Timing",
-                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
-                              ),
                       ),
-                    );
-                  }),
-                ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title != null && all.length <= 1 ? "Timing for $title" : "Class timing",
+                            style: GoogleFonts.poppins(color: textColor, fontSize: 16.5, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: Icon(Icons.close_rounded, color: textColor.withOpacity(0.6)),
+                        ),
+                      ],
+                    ),
+
+                    // ---- stage tabs (only when the student has 2+ stages) ----
+                    if (all.length > 1) ...[
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: all.map((st) {
+                            final active = st.language == selLanguage && st.stage == selStage;
+                            final n = st.stage.replaceAll('stage', '');
+                            final label = bothLanguages ? "${st.language == 'Hindi' ? 'Hindi' : 'Eng'} S$n" : "Stage $n";
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () => setSheetState(() {
+                                  selLanguage = st.language;
+                                  selStage = st.stage;
+                                  tempSelected = currentFor();
+                                }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: active ? AppColors.navy : AppColors.navy.withOpacity(0.07),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: GoogleFonts.poppins(
+                                      color: active ? Colors.white : textColor,
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    Text(
+                      selStage == null
+                          ? "Your trainer and attendance will follow the new batch."
+                          : "Changing $stageTitle only. 🔒 = used by your other stage.",
+                      style: GoogleFonts.poppins(color: textColor.withOpacity(0.60), fontSize: 10.5),
+                    ),
+                    const SizedBox(height: 10),
+                    periodTitle("MORNING", Icons.wb_sunny_rounded),
+                    grid(BatchSlots.morning),
+                    periodTitle("EVENING", Icons.nights_stay_rounded),
+                    grid(BatchSlots.evening),
+                    const SizedBox(height: 4),
+                    Obx(() {
+                      final saving = controller.isSavingBatch.value;
+                      final unchanged = tempSelected.isEmpty || tempSelected == current;
+                      final picked = BatchSlots.find(tempSelected);
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: (saving || unchanged)
+                              ? null
+                              : () async {
+                                  // remember THIS sheet's route — a snackbar may be on top when saving ends
+                                  final route = ModalRoute.of(sheetContext);
+                                  final nav = Navigator.of(sheetContext);
+                                  final ok = await controller.updateBatchTime(
+                                    tempSelected,
+                                    language: selLanguage,
+                                    stage: selStage,
+                                  );
+                                  // ✅ close the sheet itself (Get.back() closed the snackbar instead → sheet stayed open)
+                                  if (ok && route != null && route.isActive) nav.removeRoute(route);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.navy,
+                            disabledBackgroundColor: AppColors.navy.withOpacity(0.40),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: saving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                                )
+                              : Text(
+                                  unchanged ? "Pick a new timing" : "Save • ${picked?.shortLabel ?? ''}",
+                                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700),
+                                ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
               ),
             ),
           );
@@ -1814,9 +1963,11 @@ class _AccountScreenState extends State<AccountScreen> {
 
 // ================================================================
 // DEDICATED PAYMENT SCREEN
+// Upload → asks "English or Hindi course?" → waiting for verification.
+// A wrong screenshot can be deleted or replaced until the manager verifies it.
 // ================================================================
 
-class PaymentDetailsScreen extends StatelessWidget {
+class PaymentDetailsScreen extends StatefulWidget {
   final bool isOnline;
   final String managerPhone;
 
@@ -1826,52 +1977,407 @@ class PaymentDetailsScreen extends StatelessWidget {
     required this.managerPhone,
   });
 
-  Future<void> _uploadScreenshot(BuildContext context) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
+  @override
+  State<PaymentDetailsScreen> createState() => _PaymentDetailsScreenState();
+}
 
-    if (image == null) return;
+class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
+  final AuthController auth = Get.find<AuthController>();
 
-    final authController = Get.find<AuthController>();
-    final userId = authController.userData['id'] ?? authController.userData['_id'];
+  bool loadingStatus = true;
+  bool uploading = false;
+  bool deleting = false;
+  Map<String, dynamic> fee = {};
 
+  String get _userId => (auth.userData['id'] ?? auth.userData['_id'] ?? '').toString();
+
+  Map<String, String> get _authHeaders {
+    final token = (auth.box.read('token') ?? '').toString();
+    return {if (token.isNotEmpty) 'Authorization': 'Bearer $token'};
+  }
+
+  String get _status => (fee['feePaymentStatus'] ?? 'not_submitted').toString();
+  String get _screenshot => (fee['feePaymentScreenshot'] ?? '').toString();
+  bool get _isVerified => _status == 'verified' || (fee['feeStatus'] ?? '') == 'paid';
+  bool get _isPending => _status == 'pending_verification';
+  bool get _isRejected => _status == 'rejected';
+  bool get _hasScreenshot => _screenshot.isNotEmpty;
+
+  Worker? _profileWorker;
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatus();
+    // ⚡ Admin verifies/rejects → server sends 'permissions_updated' → AuthController
+    // refreshes the profile → this fires → status card updates by itself.
+    _profileWorker = ever(auth.userData, (_) => _loadStatus(silent: true));
+    // Safety net if the phone missed the live message: check every 20 s while waiting
+    _poll = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (_isPending) _loadStatus(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _profileWorker?.dispose();
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------
+  // NETWORK
+  // ---------------------------------------------------------------
+  String _serverMessage(http.Response res, String fallback) {
     try {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
+      final body = jsonDecode(res.body);
+      if (body is Map && body['message'] != null) return body['message'].toString();
+    } catch (_) {}
+    return '$fallback (${res.statusCode})';
+  }
+
+  Future<void> _loadStatus({bool silent = false}) async {
+    if (_userId.isEmpty) {
+      if (mounted) setState(() => loadingStatus = false);
+      return;
+    }
+    final wasPending = _isPending;
+    try {
+      final res = await http.get(
+        Uri.parse("${ApiEndpoints.baseUrl}/fee/my-status?userId=$_userId"),
+        headers: _authHeaders,
       );
-
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse("${ApiEndpoints.baseUrl}/fee/upload-fee-screenshot"),
-      );
-
-      final String token = (authController.box.read('token') ?? '').toString();
-      if (token.isNotEmpty) request.headers['Authorization'] = 'Bearer $token';
-      request.fields['userId'] = userId.toString();
-      request.files.add(await http.MultipartFile.fromPath('screenshot', image.path));
-
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (Get.isDialogOpen ?? false) Get.back(); // close loader
-
-      if (response.statusCode == 200) {
-        Get.snackbar(
-          "Success", 
-          "Screenshot uploaded successfully! Management will verify shortly.", 
-          backgroundColor: Colors.green, 
-          colorText: Colors.white
-        );
-      } else {
-        Get.snackbar("Error", "Failed to upload screenshot.", backgroundColor: Colors.red, colorText: Colors.white);
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        setState(() => fee = Map<String, dynamic>.from(jsonDecode(res.body)));
+        // tell the student right here when the manager just decided
+        if (silent && wasPending && _isRejected) {
+          Get.snackbar(
+            "Screenshot not accepted",
+            "Please check the payment and upload a clear screenshot again.",
+            backgroundColor: AppColors.error,
+            colorText: Colors.white,
+            snackPosition: SnackPosition.TOP,
+            margin: const EdgeInsets.all(12),
+          );
+        }
       }
     } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar("Error", "Connection error: $e", backgroundColor: Colors.red, colorText: Colors.white);
+      debugPrint('Fee status error: $e');
+    } finally {
+      if (mounted) setState(() => loadingStatus = false);
     }
   }
 
+  /// Which languages the student has enabled → pre-select when only one
+  String? _defaultLanguage() {
+    bool anyOn(dynamic m) => m is Map && m.values.any((v) => v == true);
+    final en = anyOn(auth.userData['englishAccess']);
+    final hi = anyOn(auth.userData['hindiAccess']);
+    if (en && !hi) return 'English';
+    if (hi && !en) return 'Hindi';
+    final last = (fee['feeLanguage'] ?? '').toString();
+    return last.isEmpty ? null : last;
+  }
+
+  Future<void> _startUpload() async {
+    final XFile? image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 75);
+    if (image == null || !mounted) return;
+    final language = await _askLanguage(image);
+    if (language == null || !mounted) return;
+    await _upload(image, language);
+  }
+
+  Future<void> _upload(XFile image, String language) async {
+    setState(() => uploading = true);
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse("${ApiEndpoints.baseUrl}/fee/upload-fee-screenshot"),
+      );
+      request.headers.addAll(_authHeaders);
+      request.fields['userId'] = _userId;
+      request.fields['language'] = language;
+      request.files.add(await http.MultipartFile.fromPath('screenshot', image.path, filename: image.name));
+
+      final response = await http.Response.fromStream(await request.send());
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        setState(() => fee = Map<String, dynamic>.from(jsonDecode(response.body)));
+        Get.snackbar(
+          "Uploaded ✅",
+          "$language course fee screenshot sent. The manager will verify it shortly.",
+          backgroundColor: AppColors.success,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+        );
+        auth.refreshProfile();
+      } else {
+        Get.snackbar(
+          "Upload failed",
+          _serverMessage(response, "Could not upload the screenshot"),
+          backgroundColor: AppColors.error,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+          duration: const Duration(seconds: 5),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Connection error",
+        "Check your internet and try again.",
+        backgroundColor: AppColors.error,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(14),
+      );
+    } finally {
+      if (mounted) setState(() => uploading = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete screenshot?', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17)),
+        content: Text(
+          'Delete this screenshot if it is wrong. You can upload the correct one after.',
+          style: GoogleFonts.poppins(fontSize: 12.5, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text('Delete', style: GoogleFonts.poppins(color: AppColors.error, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => deleting = true);
+    try {
+      final res = await http.delete(
+        Uri.parse("${ApiEndpoints.baseUrl}/fee/my-screenshot?userId=$_userId"),
+        headers: _authHeaders,
+      );
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        setState(() => fee = Map<String, dynamic>.from(jsonDecode(res.body)));
+        Get.snackbar(
+          "Deleted",
+          "Now upload the correct payment screenshot.",
+          backgroundColor: AppColors.navy,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+        );
+      } else {
+        Get.snackbar(
+          "Not deleted",
+          _serverMessage(res, "Could not delete"),
+          backgroundColor: AppColors.error,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(14),
+        );
+      }
+    } catch (_) {
+      Get.snackbar("Connection error", "Try again.", backgroundColor: AppColors.error, colorText: Colors.white);
+    } finally {
+      if (mounted) setState(() => deleting = false);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // "English or Hindi?" sheet (with a preview of the chosen screenshot)
+  // ---------------------------------------------------------------
+  Future<String?> _askLanguage(XFile image) {
+    String? picked = _defaultLanguage();
+
+    return Get.bottomSheet<String>(
+      StatefulBuilder(
+        builder: (context, setSheet) {
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
+          final textColor = theme.colorScheme.onSurface;
+
+          Widget option(String lang, String emoji, String sub) {
+            final selected = picked == lang;
+            return Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => setSheet(() => picked = lang),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.teal.withOpacity(0.12)
+                        : (isDark ? AppColors.darkSurface2 : AppColors.surfaceSoft),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: selected ? AppColors.teal : AppColors.teal.withOpacity(0.15),
+                      width: selected ? 1.8 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 26)),
+                      const SizedBox(height: 4),
+                      Text(lang,
+                          style: GoogleFonts.poppins(color: textColor, fontSize: 14, fontWeight: FontWeight.w800)),
+                      Text(sub,
+                          style: GoogleFonts.poppins(color: textColor.withOpacity(0.55), fontSize: 9.5)),
+                      const SizedBox(height: 6),
+                      Icon(
+                        selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        color: selected ? AppColors.teal : textColor.withOpacity(0.3),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: textColor.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('Which course is this fee for?',
+                        style: GoogleFonts.poppins(color: textColor, fontSize: 17, fontWeight: FontWeight.w800)),
+                    Text('Choose the course you paid for, then upload.',
+                        style: GoogleFonts.poppins(color: textColor.withOpacity(0.6), fontSize: 11.5)),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        option('English', '🇬🇧', 'Spoken English'),
+                        const SizedBox(width: 10),
+                        option('Hindi', '🇮🇳', 'Spoken Hindi'),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(File(image.path), width: 64, height: 86, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Your screenshot',
+                                  style: GoogleFonts.poppins(
+                                      color: textColor, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                              Text('Make sure the amount, date and UPI ID are clearly visible.',
+                                  style: GoogleFonts.poppins(
+                                      color: textColor.withOpacity(0.6), fontSize: 10.5, height: 1.35)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Get.back(),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 48),
+                              side: BorderSide(color: textColor.withOpacity(0.2)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Text('Cancel',
+                                style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: picked == null ? null : () => Get.back(result: picked),
+                            icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+                            label: Text(
+                              picked == null ? 'Choose a course' : 'Upload for $picked',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 13),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(0, 48),
+                              backgroundColor: AppColors.teal,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: AppColors.teal.withOpacity(0.35),
+                              disabledForegroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  void _openScreenshot() {
+    if (!_hasScreenshot) return;
+    Get.to(
+      () => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, elevation: 0),
+        body: Center(
+          child: InteractiveViewer(
+            maxScale: 4,
+            child: Image.network(_screenshot, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // BUILD
+  // ---------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1890,12 +2396,8 @@ class PaymentDetailsScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          isOnline ? "Online Tuition Fees" : "Offline Center Fees",
-          style: GoogleFonts.poppins(
-            color: textColor,
-            fontWeight: FontWeight.w800,
-            fontSize: 17,
-          ),
+          widget.isOnline ? "Online Tuition Fees" : "Offline Center Fees",
+          style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w800, fontSize: 17),
         ),
       ),
       body: Container(
@@ -1905,256 +2407,323 @@ class PaymentDetailsScreen extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: [
               theme.scaffoldBackgroundColor,
-              isDark
-                  ? AppColors.darkSurface
-                  : AppColors.periwinkle.withOpacity(0.10),
+              isDark ? AppColors.darkSurface : AppColors.periwinkle.withOpacity(0.10),
             ],
           ),
         ),
         child: SafeArea(
           top: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final veryCompact = constraints.maxHeight < 650;
-              final availableQr = constraints.maxHeight - 320;
-              final qrSize = availableQr
-                  .clamp(veryCompact ? 190.0 : 215.0, 270.0)
-                  .toDouble();
-
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(14, 5, 14, 7),
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        veryCompact ? 9 : 12,
-                        16,
-                        veryCompact ? 9 : 12,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.deepNavy, AppColors.navy],
-                        ),
-                        borderRadius: BorderRadius.circular(21),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.navy.withOpacity(0.20),
-                            blurRadius: 15,
-                            offset: const Offset(0, 6),
-                          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.teal,
+                  onRefresh: _loadStatus,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    padding: const EdgeInsets.fromLTRB(14, 5, 14, 10),
+                    child: Column(
+                      children: [
+                        _headerCard(),
+                        const SizedBox(height: 11),
+                        if (loadingStatus)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: LinearProgressIndicator(minHeight: 2, color: AppColors.teal),
+                          )
+                        else if (_hasScreenshot || _isVerified) ...[
+                          _statusCard(context),
+                          const SizedBox(height: 11),
                         ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: veryCompact ? 40 : 44,
-                            height: veryCompact ? 40 : 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(13),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.18),
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.qr_code_2_rounded,
-                              color: AppColors.yellow,
-                              size: 25,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Official Payment",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 15.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  isOnline
-                                      ? "Online UPI payment"
-                                      : "Offline centre payment",
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.72),
-                                    fontSize: 10.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                        if (!_isVerified) _qrCard(context, isDark, textColor, secondary),
+                      ],
                     ),
-
-                    SizedBox(height: veryCompact ? 8 : 11),
-
-                    Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.fromLTRB(
-                          13,
-                          veryCompact ? 7 : 10,
-                          13,
-                          veryCompact ? 7 : 9,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkSurface
-                              : const Color(0xFFF7FBFD),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: AppColors.teal.withOpacity(0.22),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.navy.withOpacity(
-                                isDark ? 0.15 : 0.07,
-                              ),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Scan & Pay",
-                              style: GoogleFonts.poppins(
-                                color: textColor,
-                                fontSize: veryCompact ? 15 : 16,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              "PhonePe • Google Pay • Paytm • BHIM UPI",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                color: secondary,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: veryCompact ? 7 : 10),
-
-                            Container(
-                              width: qrSize,
-                              height: qrSize,
-                              padding: EdgeInsets.all(veryCompact ? 6 : 7),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: AppColors.yellow,
-                                  width: 3,
-                                ),
-                              ),
-                              child: Image.asset(
-                                "assets/images/paymentqrcode.png",
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.qr_code_2_rounded,
-                                        size: 75,
-                                        color: AppColors.navy,
-                                      ),
-                                      Text(
-                                        "UPI Payment QR",
-                                        style: GoogleFonts.poppins(
-                                          color: AppColors.navy,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            SizedBox(height: veryCompact ? 6 : 9),
-
-                            _paymentStep(
-                              context,
-                              number: "1",
-                              title: "Scan the QR",
-                              subtitle: "Complete your course fee payment.",
-                            ),
-                            SizedBox(height: veryCompact ? 3 : 5),
-                            _paymentStep(
-                              context,
-                              number: "2",
-                              title: "Save the receipt",
-                              subtitle: "Take a screenshot after payment.",
-                            ),
-                            SizedBox(height: veryCompact ? 3 : 5),
-                            _paymentStep(
-                              context,
-                              number: "3",
-                              title: "Upload to app",
-                              subtitle: "Submit screenshot for automated verification.",
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: veryCompact ? 44 : 46,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _uploadScreenshot(context),
-                        icon: const Icon(Icons.cloud_upload_rounded, size: 18),
-                        label: Text(
-                          "Upload Payment Screenshot",
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.teal,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      "Upload your payment receipt screenshot for instant review.",
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        color: secondary,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              );
-            },
+              ),
+              if (!_isVerified)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: (uploading || deleting) ? null : _startUpload,
+                          icon: uploading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : Icon(_hasScreenshot ? Icons.sync_rounded : Icons.cloud_upload_rounded, size: 18),
+                          label: Text(
+                            uploading
+                                ? "Uploading…"
+                                : (_hasScreenshot ? "Upload a New Screenshot" : "Upload Payment Screenshot"),
+                            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w800),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.teal,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.teal.withOpacity(0.5),
+                            disabledForegroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _hasScreenshot
+                            ? "A new upload replaces your current screenshot."
+                            : "You'll choose English or Hindi course after picking the screenshot.",
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(color: secondary, fontSize: 9.5, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _headerCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [AppColors.deepNavy, AppColors.navy]),
+        borderRadius: BorderRadius.circular(21),
+        boxShadow: [
+          BoxShadow(color: AppColors.navy.withOpacity(0.20), blurRadius: 15, offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: Colors.white.withOpacity(0.18)),
+            ),
+            child: const Icon(Icons.qr_code_2_rounded, color: AppColors.yellow, size: 25),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Official Payment",
+                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w800)),
+                Text(widget.isOnline ? "Online UPI payment" : "Offline centre payment",
+                    style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.72), fontSize: 10.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- uploaded screenshot: status + delete / replace ----
+  Widget _statusCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = theme.colorScheme.onSurface;
+
+    final Color color = _isVerified ? AppColors.success : (_isRejected ? AppColors.error : AppColors.warning);
+    final String label = _isVerified
+        ? "Verified ✅"
+        : _isRejected
+            ? "Rejected"
+            : "Waiting for verification";
+    final String note = _isVerified
+        ? "Your fee for this month is verified. Thank you!"
+        : _isRejected
+            ? "The manager rejected this screenshot. Delete it and upload the correct one."
+            : "The manager will check it soon. Wrong screenshot? Delete it and upload again.";
+    final lang = (fee['feeLanguage'] ?? '').toString();
+    final submitted = DateTime.tryParse((fee['feeSubmittedAt'] ?? '').toString())?.toLocal();
+    final canDelete = fee['canDelete'] == true || ((_isPending || _isRejected) && _hasScreenshot);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : const Color(0xFFF7FBFD),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.45), width: 1.3),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: _openScreenshot,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 70,
+                    height: 94,
+                    color: textColor.withOpacity(0.06),
+                    child: _hasScreenshot
+                        ? Image.network(
+                            _screenshot,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Icon(Icons.broken_image_outlined, color: textColor.withOpacity(0.4)),
+                          )
+                        : Icon(Icons.verified_rounded, color: color, size: 30),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Your payment screenshot",
+                        style: GoogleFonts.poppins(color: textColor, fontSize: 13, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 5,
+                      children: [
+                        _chip(label, color),
+                        if (lang.isNotEmpty) _chip(lang == 'Hindi' ? '🇮🇳 Hindi course' : '🇬🇧 English course', AppColors.navy),
+                      ],
+                    ),
+                    if (submitted != null) ...[
+                      const SizedBox(height: 5),
+                      Text("Uploaded ${DateFormat('d MMM, h:mm a').format(submitted)}",
+                          style: GoogleFonts.poppins(color: textColor.withOpacity(0.55), fontSize: 10)),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(note, style: GoogleFonts.poppins(color: textColor.withOpacity(0.7), fontSize: 11, height: 1.4)),
+          if (canDelete) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: (deleting || uploading) ? null : _delete,
+                    icon: deleting
+                        ? const SizedBox(
+                            width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.error))
+                        : const Icon(Icons.delete_outline_rounded, size: 17),
+                    label: Text("Delete", style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      minimumSize: const Size(0, 42),
+                      side: BorderSide(color: AppColors.error.withOpacity(0.4)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _openScreenshot,
+                    icon: const Icon(Icons.zoom_in_rounded, size: 17),
+                    label: Text("View", style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      minimumSize: const Size(0, 42),
+                      side: BorderSide(color: AppColors.navy.withOpacity(0.3)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String text, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+        child: Text(text, style: GoogleFonts.poppins(color: color, fontSize: 9.5, fontWeight: FontWeight.w800)),
+      );
+
+  Widget _qrCard(BuildContext context, bool isDark, Color textColor, Color secondary) {
+    final width = MediaQuery.of(context).size.width;
+    final qrSize = (width - 120).clamp(190.0, 260.0).toDouble();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : const Color(0xFFF7FBFD),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.teal.withOpacity(0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withOpacity(isDark ? 0.15 : 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text("Scan & Pay", style: GoogleFonts.poppins(color: textColor, fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(
+            "PhonePe • Google Pay • Paytm • BHIM UPI",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(color: secondary, fontSize: 9.5, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: qrSize,
+            height: qrSize,
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.yellow, width: 3),
+            ),
+            child: Image.asset(
+              "assets/images/paymentqrcode.png",
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.qr_code_2_rounded, size: 75, color: AppColors.navy),
+                    Text("UPI Payment QR",
+                        style: GoogleFonts.poppins(color: AppColors.navy, fontSize: 11, fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _paymentStep(context, number: "1", title: "Scan the QR", subtitle: "Complete your course fee payment."),
+          const SizedBox(height: 5),
+          _paymentStep(context, number: "2", title: "Save the receipt", subtitle: "Take a screenshot after payment."),
+          const SizedBox(height: 5),
+          _paymentStep(context,
+              number: "3", title: "Upload & choose course", subtitle: "Pick the screenshot, then English or Hindi."),
+        ],
       ),
     );
   }
@@ -2179,40 +2748,210 @@ class PaymentDetailsScreen extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.teal.withOpacity(0.25)),
           ),
-          child: Text(
-            number,
-            style: GoogleFonts.poppins(
-              color: AppColors.teal,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          child: Text(number,
+              style: GoogleFonts.poppins(color: AppColors.teal, fontSize: 11, fontWeight: FontWeight.w800)),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  color: textColor,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: GoogleFonts.poppins(
-                  color: textColor.withOpacity(0.56),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(title, style: GoogleFonts.poppins(color: textColor, fontSize: 11.5, fontWeight: FontWeight.w700)),
+              Text(subtitle,
+                  style: GoogleFonts.poppins(
+                      color: textColor.withOpacity(0.56), fontSize: 10, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+
+// =====================================================================
+// ⏰ MY CLASS TIMINGS — full page (opened from the profile row)
+// One clean card per class, grouped English / Hindi, "Change" on each.
+// =====================================================================
+class _MyTimingsPage extends StatelessWidget {
+  final List<_StageTiming> Function() stages;
+  final void Function(BuildContext context, _StageTiming stage) onChange;
+  const _MyTimingsPage({required this.stages, required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = theme.colorScheme.onSurface;
+    final controller = Get.find<AuthController>();
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: textColor),
+          onPressed: () => Get.back(),
+        ),
+        title: Text('My class timings',
+            style: GoogleFonts.poppins(color: textColor, fontSize: 17, fontWeight: FontWeight.w700)),
+      ),
+      body: Obx(() {
+        controller.userData.length; // rebuild right after a timing is saved
+        final all = stages();
+        final now = DateTime.now();
+        final mins = now.hour * 60 + now.minute;
+        final groups = <String, List<_StageTiming>>{};
+        for (final st in all) {
+          groups.putIfAbsent(st.language, () => []).add(st);
+        }
+        for (final g in groups.values) {
+          g.sort((a, b) {
+            final sa = BatchSlots.find(a.timing)?.startMinutes ?? 9999;
+            final sb = BatchSlots.find(b.timing)?.startMinutes ?? 9999;
+            return sa.compareTo(sb);
+          });
+        }
+
+        if (all.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Text('No classes enabled yet.\nThe institute will add your stages.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(color: textColor.withOpacity(0.6), fontSize: 13)),
+            ),
+          );
+        }
+
+        Widget card(_StageTiming st) {
+          final slot = BatchSlots.find(st.timing);
+          final notSet = slot == null;
+          final live = !notSet && now.weekday != DateTime.sunday && mins >= slot!.startMinutes && mins <= slot!.startMinutes + 90;
+          final morning = !notSet && slot!.period == 'AM';
+          final accent = notSet ? AppColors.yellow : AppColors.teal;
+          final endText = notSet ? '' : '${slot!.end} ${slot!.endPeriod ?? slot!.period}';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+            decoration: BoxDecoration(
+              color: isDark ? theme.cardColor : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: live ? AppColors.teal : accent.withOpacity(notSet ? 0.7 : 0.25), width: live ? 1.6 : 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: accent.withOpacity(0.14), borderRadius: BorderRadius.circular(15)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('STAGE',
+                          style: GoogleFonts.poppins(
+                              color: textColor.withOpacity(0.55), fontSize: 7, fontWeight: FontWeight.w800, letterSpacing: .5)),
+                      Text(st.stage.replaceAll('stage', ''),
+                          style: GoogleFonts.poppins(color: textColor, fontSize: 18, fontWeight: FontWeight.w800, height: 1.05)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(notSet ? 'Timing not set' : '${slot!.start} ${slot!.period}',
+                          style: GoogleFonts.poppins(color: textColor, fontSize: 17, fontWeight: FontWeight.w800, height: 1.15)),
+                      Row(
+                        children: [
+                          if (!notSet) ...[
+                            Icon(morning ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
+                                size: 13, color: morning ? const Color(0xFFE0A21B) : AppColors.teal),
+                            const SizedBox(width: 4),
+                            Text('till $endText',
+                                style: GoogleFonts.poppins(color: textColor.withOpacity(0.6), fontSize: 11)),
+                          ] else
+                            Text('Choose a batch for this stage',
+                                style: GoogleFonts.poppins(color: textColor.withOpacity(0.6), fontSize: 11)),
+                          if (live) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                              decoration: BoxDecoration(color: AppColors.teal, borderRadius: BorderRadius.circular(8)),
+                              child: Text('NOW',
+                                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: () => onChange(context, st),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: notSet ? (isDark ? AppColors.yellow : AppColors.deepNavy) : AppColors.teal,
+                    side: BorderSide(color: accent.withOpacity(0.6)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(0, 36),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(notSet ? 'Choose' : 'Change',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 30),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.teal.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: AppColors.teal, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Every class is 90 minutes. Tap Change to move a stage to another batch — two stages can\'t be at the same time.',
+                      style: GoogleFonts.poppins(color: textColor.withOpacity(0.75), fontSize: 11, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (final lang in ['English', 'Hindi'])
+              if (groups[lang] != null) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(2, 18, 2, 10),
+                  child: Row(
+                    children: [
+                      Text(lang == 'English' ? '🇬🇧' : '🇮🇳', style: const TextStyle(fontSize: 15)),
+                      const SizedBox(width: 6),
+                      Text('$lang course',
+                          style: GoogleFonts.poppins(color: textColor, fontSize: 14.5, fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 8),
+                      Text('${groups[lang]!.length} class${groups[lang]!.length == 1 ? '' : 'es'}',
+                          style: GoogleFonts.poppins(color: textColor.withOpacity(0.55), fontSize: 11)),
+                    ],
+                  ),
+                ),
+                ...groups[lang]!.map(card),
+              ],
+          ],
+        );
+      }),
     );
   }
 }

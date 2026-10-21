@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as IO;
 import 'dart:ui';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -17,12 +17,22 @@ import 'package:lets_talk/Screens/auth/signup_screen2.dart';
 import 'package:lets_talk/Screens/auth/welcome_screen.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:lets_talk/apis/batch_slots.dart';
+import 'package:lets_talk/services/class_reminder.dart'; // ⏰ class reminders
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:smart_auth/smart_auth.dart'; // 📩 Android: read the OTP SMS automatically
 
 
 enum OtpFlowType { registration, forgotPassword }
 
 class AuthController extends GetxController {
+// 🔕 "Access Synchronized" spam guard: admin saves can send several updates in a row
+// and old sockets used to stack listeners → the same popup 3–5 times.
+Timer? _permDebounce;
+Timer? _noticePoll; // 📢 manager notice: safety check every 30 s if a live message is missed
+Timer? _noticeDebounce;
+DateTime? _selfUpdateAt; // student changed their own timing → no popup for it
+DateTime? _lastSyncPopupAt;
+
 final signupFormKey = GlobalKey<FormState>();
 
 final nameController = TextEditingController();
@@ -38,13 +48,15 @@ final confirmPasswordController = TextEditingController();
 
 final otpController = TextEditingController();
 
-final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 final box = GetStorage();
 IO.Socket? socket;
 
 var isLoading = false.obs;
-var verificationId = ''.obs;
-int? resendToken;
+// 🔐 Phone OTP by SMS (MSG91, sent by our server — no Firebase)
+var otpToken = ''; // proof from /api/otp/verify, used once for register / reset
+var otpPhone = ''; // 10-digit number the code was sent to
+var resendIn = 0.obs; // seconds until "Resend code" is allowed
+Timer? _resendTimer;
 var currentOtpFlow = OtpFlowType.registration.obs;
 String selectedMode = "online";
 var selectedBatch = ''.obs; // canonical label, e.g. "05:30 AM - 07:00 AM"
@@ -58,6 +70,10 @@ var isMessageVisible = false.obs;
 @override
 void onInit() {
 super.onInit();
+// ⏰ Class reminders follow the student's timings automatically:
+// login → set, admin changes timing → updated, logout (userData = {}) → removed
+ever(userData, (_) => ClassReminder.sync(userData));
+ClassReminder.sync(userData);
 if (box.hasData('user')) {
 userData.value = box.read('user');
 initSocket();
@@ -67,6 +83,12 @@ refreshProfile(); // Sync latest state on cold start
 
 @override
 void onClose() {
+_resendTimer?.cancel();
+cancelOtpAutoRead();
+_permDebounce?.cancel();
+_noticePoll?.cancel();
+_noticeDebounce?.cancel();
+socket?.clearListeners();
 socket?.dispose();
 super.onClose();
 }
@@ -82,7 +104,15 @@ return phone;
 }
 
 void clearLocalUserData() {
+_permDebounce?.cancel();
+_noticePoll?.cancel();
+_noticeDebounce?.cancel();
+adminMessage.value = null;
+isMessageVisible.value = false;
+socket?.clearListeners();
 socket?.disconnect();
+socket?.dispose();
+socket = null;
 box.erase();
 userData.value = {};
 }
@@ -95,13 +125,18 @@ final user = box.read('user');
 final String? userId = user != null ? (user['id'] ?? user['_id']) : null;
 if (userId == null) return;
 
+// Remove the OLD socket and ALL its listeners first. Without this every login /
+// app start added one more 'permissions_updated' listener → popup shown many times.
+socket?.clearListeners();
 socket?.disconnect();
+socket?.dispose();
 
 socket = IO.io(
   ApiEndpoints.socketUrl,
   IO.OptionBuilder()
       .setTransports(['websocket'])
       .setAuth({'token': box.read('token') ?? ''})
+      .enableForceNew() // fresh socket, never a cached one that still has old listeners
       .enableAutoConnect()
       .build(),
 );
@@ -111,58 +146,31 @@ socket!.connect();
 socket!.onConnect((_) {
   debugPrint("🔌 Student connected to Socket.io server");
   socket!.emit('join_user_room', userId.toString());
+  fetchNotice(); // anything posted while we were offline
 });
 
 socket!.onReconnect((_) {
   debugPrint("🔄 Reconnected to Socket.io server");
   socket!.emit('join_user_room', userId.toString());
+  fetchNotice();
 });
+
+_noticePoll?.cancel();
+_noticePoll = Timer.periodic(const Duration(seconds: 30), (_) => fetchNotice());
 
 // ⚡ LIVE PERMISSION & MODE UPDATE FROM ADMIN
-socket!.on('permissions_updated', (data) async {
-  debugPrint("⚡ Real-time permission update received from Admin");
-  // Instantly pull fresh profile from backend so all stage locks update live
-  await refreshProfile();
-
-  Get.snackbar(
-    "Access Synchronized",
-    "Your institute permissions have been updated live!",
-    backgroundColor: AppColors.teal,
-    colorText: Colors.white,
-    duration: const Duration(seconds: 3),
-    snackPosition: SnackPosition.BOTTOM,
-  );
+// Several updates within 1.5 s (admin saving access + timing + section) → ONE refresh.
+socket!.on('permissions_updated', (data) {
+  debugPrint("⚡ Real-time permission update received");
+  _permDebounce?.cancel();
+  _permDebounce = Timer(const Duration(milliseconds: 1500), _applyPermissionUpdate);
 });
 
-// 🚀 FIXED: Isolated real-time announcement listener
+// 📢 Manager notice — LIVE. Show it at once from the message, then confirm with the server.
 socket!.on('new_notification', (data) {
-  if (data is Map) {
-    // Resolve current student's mode
-    final rawStudentMode =
-        (userData['mode'] ?? box.read('user')?['mode'] ?? 'online')
-            .toString()
-            .toLowerCase()
-            .trim();
-    final String studentMode =
-        (rawStudentMode == 'offline') ? 'offline' : 'online';
-
-    // Check broadcast targetMode
-    final String targetMode =
-        (data['targetMode'] ?? 'all').toString().toLowerCase().trim();
-
-    // Process only if the broadcast applies to this student's mode or "all"
-    if (targetMode == studentMode || targetMode == 'all') {
-      if (data['hasNotification'] == true &&
-          data['message'] != null &&
-          data['message'].toString().trim().isNotEmpty) {
-        adminMessage.value = data['message'].toString();
-        isMessageVisible.value = true;
-      } else {
-        adminMessage.value = null;
-        isMessageVisible.value = false;
-      }
-    }
-  }
+  if (data is Map) applyNotice(Map<String, dynamic>.from(data));
+  _noticeDebounce?.cancel();
+  _noticeDebounce = Timer(const Duration(milliseconds: 900), fetchNotice);
 });
 
 socket!.on('force_logout', (data) {
@@ -190,7 +198,6 @@ forceLogout('Session expired. Please log in again.');
 
 void forceLogout(String reason) async {
 clearLocalUserData();
-await _firebaseAuth.signOut();
 Get.offAll(() => const WelcomeScreen());
 Get.snackbar(
 'Logged Out',
@@ -201,95 +208,179 @@ duration: const Duration(seconds: 4),
 );
 }
 
+String _tenDigits(String phone) {
+final d = phone.replaceAll(RegExp(r'\D'), '');
+return d.length > 10 ? d.substring(d.length - 10) : d;
+}
+
+String _serverMessage(http.Response res, String fallback) {
+try {
+final d = jsonDecode(res.body);
+if (d is Map && d['message'] != null) return d['message'].toString();
+} catch (_) {}
+return fallback;
+}
+
+void _startResendCountdown(int seconds) {
+_resendTimer?.cancel();
+resendIn.value = seconds;
+_resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+if (resendIn.value <= 1) {
+resendIn.value = 0;
+t.cancel();
+} else {
+resendIn.value--;
+}
+});
+}
+
+/// 📩 Ask OUR server to send a 6-digit code by SMS (MSG91).
+/// openScreen=false → resend from the OTP screen (stay there).
 Future<void> sendOtp({
 required String rawPhone,
 required OtpFlowType flowType,
+bool openScreen = true,
 }) async {
+final phone = _tenDigits(rawPhone);
+if (phone.length != 10) {
+Get.snackbar("Invalid number", "Enter a valid 10-digit mobile number",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
+return;
+}
 isLoading.value = true;
 currentOtpFlow.value = flowType;
-String formattedPhone = _formatPhone(rawPhone);
-
 try {
-  await _firebaseAuth.verifyPhoneNumber(
-    phoneNumber: formattedPhone,
-    timeout: const Duration(seconds: 60),
-    verificationCompleted: (PhoneAuthCredential credential) async {
-      await _firebaseAuth.signInWithCredential(credential);
-      _handleOtpSuccess();
-    },
-    verificationFailed: (FirebaseAuthException e) {
-      isLoading.value = false;
-      Get.snackbar(
-        "OTP Failed",
-        e.message ?? "Verification failed",
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
-    },
-    codeSent: (String verId, int? resendTok) {
-      isLoading.value = false;
-      verificationId.value = verId;
-      resendToken = resendTok;
-      Get.to(() => OtpVerificationScreen(phoneNumber: formattedPhone));
-    },
-    codeAutoRetrievalTimeout: (String verId) {
-      verificationId.value = verId;
-    },
-  );
+final res = await http
+.post(
+Uri.parse("${ApiEndpoints.baseUrl}/otp/send"),
+headers: {"Content-Type": "application/json"},
+body: jsonEncode({
+"phone": phone,
+"purpose": flowType == OtpFlowType.registration ? "signup" : "reset",
+}),
+)
+.timeout(const Duration(seconds: 20));
+final data = jsonDecode(res.body);
+
+if (res.statusCode == 200) {
+otpPhone = phone;
+otpToken = '';
+otpController.clear();
+_startResendCountdown(int.tryParse('${data['resendIn'] ?? 60}') ?? 60);
+_listenForSmsCode(); // 📩 fills the boxes when the SMS arrives (Android)
+if (openScreen) {
+Get.to(() => OtpVerificationScreen(phoneNumber: _formatPhone(phone)));
+} else {
+Get.snackbar("Code sent", "A new code was sent to +91 $phone",
+backgroundColor: Colors.green, colorText: Colors.white);
+}
+} else {
+// 429 = wait before resending → keep the countdown right
+if (data is Map && data['resendIn'] != null) {
+_startResendCountdown(int.tryParse('${data['resendIn']}') ?? 60);
+}
+Get.snackbar("OTP not sent", _serverMessage(res, "Could not send the code. Try again."),
+backgroundColor: Colors.redAccent, colorText: Colors.white);
+}
+} on TimeoutException {
+Get.snackbar("Slow network", "Could not reach the server. Please try again.",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
 } catch (e) {
-  isLoading.value = false;
-  Get.snackbar(
-    "Error",
-    e.toString(),
-    backgroundColor: Colors.redAccent,
-    colorText: Colors.white,
-  );
+Get.snackbar("Error", "Connection failed. Please try again.",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
+} finally {
+isLoading.value = false;
+}
 }
 
+/// "Resend code" on the OTP screen
+Future<void> resendOtp() async {
+if (resendIn.value > 0 || isLoading.value || otpPhone.isEmpty) return;
+await sendOtp(rawPhone: otpPhone, flowType: currentOtpFlow.value, openScreen: false);
+}
+
+/// ✅ Check the code with OUR server → otpToken
+// ============================================================
+// 📩 OTP AUTO-FILL
+// Android: SMS User Consent API — when the SMS arrives, Android shows
+//   "Allow Let's Speak to read this message?" → Allow → the code fills
+//   the boxes and is verified automatically. No app hash needed in the SMS.
+// iPhone: the code appears above the keyboard ("From Messages 123456") →
+//   one tap fills it (autofillHints on the OTP boxes). Nothing to do here.
+// ============================================================
+bool _smsListening = false;
+
+Future<void> _listenForSmsCode() async {
+if (!IO.Platform.isAndroid) return;
+cancelOtpAutoRead(); // a resend starts a fresh listener
+_smsListening = true;
+try {
+final res = await SmartAuth.instance.getSmsWithUserConsentApi();
+if (!_smsListening) return; // screen closed / verified meanwhile
+_smsListening = false;
+if (!res.hasData) return; // student tapped "Deny" → they can still type it
+final raw = res.requireData.code ?? '';
+final code = raw.replaceAll(RegExp(r'\D'), '');
+if (code.length != 6) return;
+otpController.text = code;
+await verifyOtp(code);
+} catch (e) {
+_smsListening = false;
+debugPrint('SMS auto-read error: $e');
+}
+}
+
+void cancelOtpAutoRead() {
+if (!_smsListening) return;
+_smsListening = false;
+try {
+SmartAuth.instance.removeUserConsentApiListener();
+} catch (_) {}
 }
 
 Future<void> verifyOtp(String code) async {
-if (code.length < 6) {
-Get.snackbar(
-"Invalid OTP",
-"Please enter 6-digit code",
-backgroundColor: Colors.redAccent,
-colorText: Colors.white,
-);
+final otp = code.replaceAll(RegExp(r'\D'), '');
+if (otp.length < 6) {
+Get.snackbar("Invalid OTP", "Please enter the 6-digit code",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
 return;
 }
-
+if (isLoading.value) return;
 isLoading.value = true;
 try {
-  PhoneAuthCredential credential = PhoneAuthProvider.credential(
-    verificationId: verificationId.value,
-    smsCode: code,
-  );
-
-  UserCredential userCred = await _firebaseAuth.signInWithCredential(
-    credential,
-  );
-  if (userCred.user != null) {
-    _handleOtpSuccess();
-  }
-} on FirebaseAuthException catch (e) {
-  isLoading.value = false;
-  Get.snackbar(
-    "Verification Failed",
-    e.message ?? "Invalid Code",
-    backgroundColor: Colors.redAccent,
-    colorText: Colors.white,
-  );
-} catch (e) {
-  isLoading.value = false;
-  Get.snackbar(
-    "Error",
-    e.toString(),
-    backgroundColor: Colors.redAccent,
-    colorText: Colors.white,
-  );
+final res = await http
+.post(
+Uri.parse("${ApiEndpoints.baseUrl}/otp/verify"),
+headers: {"Content-Type": "application/json"},
+body: jsonEncode({
+"phone": otpPhone,
+"purpose": currentOtpFlow.value == OtpFlowType.registration ? "signup" : "reset",
+"otp": otp,
+}),
+)
+.timeout(const Duration(seconds: 20));
+final data = jsonDecode(res.body);
+if (res.statusCode == 200 && (data['otpToken'] ?? '').toString().isNotEmpty) {
+otpToken = data['otpToken'].toString();
+cancelOtpAutoRead();
+_resendTimer?.cancel();
+resendIn.value = 0;
+_handleOtpSuccess();
+} else {
+isLoading.value = false;
+otpController.clear();
+Get.snackbar("Verification Failed", _serverMessage(res, "Invalid code"),
+backgroundColor: Colors.redAccent, colorText: Colors.white);
 }
-
+} on TimeoutException {
+isLoading.value = false;
+Get.snackbar("Slow network", "Could not reach the server. Please try again.",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
+} catch (e) {
+isLoading.value = false;
+Get.snackbar("Error", "Connection failed. Please try again.",
+backgroundColor: Colors.redAccent, colorText: Colors.white);
+}
 }
 
 void _handleOtpSuccess() {
@@ -352,6 +443,7 @@ body: jsonEncode({
 "password": passwordController.text,
 "mode": selectedMode,
 "batchTime": selectedBatch.value,
+"otpToken": otpToken, // 🔐 proof that this phone number was verified
 }),
 );
 
@@ -364,6 +456,7 @@ body: jsonEncode({
 
     initSocket();
     selectedBatch.value = '';
+    otpToken = '';
 
     Get.offAll(() => const MainNavigationScreen());
     Get.snackbar(
@@ -494,9 +587,8 @@ return;
 
 isLoading.value = true;
 try {
-  // Proof of the OTP the user just verified — the server checks it with Firebase
-  final String? idToken = await _firebaseAuth.currentUser?.getIdToken(true);
-  if (idToken == null) {
+  // 🔐 Proof of the OTP the user just verified (our server checks it)
+  if (otpToken.isEmpty) {
     Get.snackbar(
       "Verification expired",
       "Please verify your phone number again.",
@@ -512,14 +604,14 @@ try {
     body: jsonEncode({
       "phone": forgotPhoneController.text.trim(),
       "newPassword": newPasswordController.text,
-      "idToken": idToken,
+      "otpToken": otpToken,
     }),
   );
 
   final data = jsonDecode(response.body);
 
   if (response.statusCode == 200) {
-    await _firebaseAuth.signOut();
+    otpToken = '';
     Get.offAll(() => const WelcomeScreen());
     Get.snackbar(
       "Success",
@@ -549,6 +641,116 @@ try {
   isLoading.value = false;
 }
 
+}
+
+// ==========================================
+// LIVE UPDATE FROM ADMIN → refresh quietly, tell the student only what changed
+// ==========================================
+Future<void> _applyPermissionUpdate() async {
+  final before = Map<String, dynamic>.from(userData);
+  await refreshProfile(); // stage locks, timings, fee status update live on every screen
+  final after = Map<String, dynamic>.from(userData);
+
+  final msg = _changeMessage(before, after);
+  if (msg == null) return; // nothing the student needs to know → no popup
+
+  // never two popups close together
+  final now = DateTime.now();
+  if (_lastSyncPopupAt != null && now.difference(_lastSyncPopupAt!) < const Duration(seconds: 8)) return;
+  _lastSyncPopupAt = now;
+
+  if (Get.isSnackbarOpen) Get.closeAllSnackbars();
+  Get.snackbar(
+    msg.$1,
+    msg.$2,
+    backgroundColor: AppColors.teal,
+    colorText: Colors.white,
+    duration: const Duration(seconds: 3),
+    snackPosition: SnackPosition.BOTTOM,
+  );
+}
+
+int _stagesOn(dynamic access) {
+  if (access is! Map) return 0;
+  return access.values.where((v) => v == true).length;
+}
+
+String _sig(dynamic v) => v == null ? '' : jsonEncode(v);
+
+/// (title, message) for a change the student should see, or null to stay quiet
+(String, String)? _changeMessage(Map<String, dynamic> b, Map<String, dynamic> a) {
+  final stagesBefore = _stagesOn(b['englishAccess']) + _stagesOn(b['hindiAccess']);
+  final stagesAfter = _stagesOn(a['englishAccess']) + _stagesOn(a['hindiAccess']);
+  if (stagesAfter > stagesBefore) {
+    return ("New stage unlocked 🎉", "Your new class is ready in the app.");
+  }
+  if (stagesAfter < stagesBefore || _sig(b['englishAccess']) != _sig(a['englishAccess']) ||
+      _sig(b['hindiAccess']) != _sig(a['hindiAccess'])) {
+    return ("Course access updated", "Your stages were updated by the institute.");
+  }
+  if ((b['feeStatus'] ?? '') != 'paid' && a['feeStatus'] == 'paid') {
+    return ("Fee verified ✅", "Thank you! Your payment is confirmed.");
+  }
+  if ((b['mode'] ?? '') != (a['mode'] ?? '') && (a['mode'] ?? '').toString().isNotEmpty) {
+    return ("Class mode changed", "You are now an ${a['mode']} student.");
+  }
+  final selfChange = _selfUpdateAt != null && DateTime.now().difference(_selfUpdateAt!) < const Duration(seconds: 20);
+  final timingChanged = (b['batchTime'] ?? '') != (a['batchTime'] ?? '') ||
+      _sig(b['englishBatch']) != _sig(a['englishBatch']) ||
+      _sig(b['hindiBatch']) != _sig(a['hindiBatch']);
+  if (timingChanged && !selfChange) {
+    return ("Class timing updated", "The institute changed your class timing. Check your home screen.");
+  }
+  if ((b['onlineSection'] ?? '') != (a['onlineSection'] ?? '') && !selfChange) {
+    return ("Section updated", "You are now in Section ${a['onlineSection']}.");
+  }
+  return null; // e.g. fee screenshot status, same data again → quiet
+}
+
+// ==========================================
+// 📢 MANAGER NOTICE (one place for every screen)
+// ==========================================
+String get _myMode {
+  final raw = (userData['mode'] ?? box.read('user')?['mode'] ?? 'online').toString().toLowerCase().trim();
+  return raw == 'offline' ? 'offline' : 'online';
+}
+
+/// Gets the current notice for this student's mode (or "all") from the server.
+Future<void> fetchNotice() async {
+  if (box.read('token') == null && userData.isEmpty) return;
+  try {
+    final res = await http
+        .get(Uri.parse('${ApiEndpoints.userNotification}?mode=$_myMode&_t=${DateTime.now().millisecondsSinceEpoch}'))
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      if (data is Map) applyNotice(Map<String, dynamic>.from(data));
+    }
+  } catch (e) {
+    debugPrint('Notice fetch error: $e');
+  }
+}
+
+/// Shows / hides the notice. A notice the student closed (X) stays closed
+/// until the manager posts a NEW one.
+void applyNotice(Map<String, dynamic> data) {
+  final target = (data['targetMode'] ?? 'all').toString().toLowerCase().trim();
+  if (target != _myMode && target != 'all') return; // for the other mode
+  final msg = (data['message'] ?? '').toString().trim();
+  if (data['hasNotification'] == true && msg.isNotEmpty) {
+    adminMessage.value = msg;
+    isMessageVisible.value = msg != (box.read('dismissed_notice') ?? '').toString();
+  } else {
+    adminMessage.value = null;
+    isMessageVisible.value = false;
+  }
+}
+
+/// X on the notice card
+void dismissNotice() {
+  final msg = adminMessage.value;
+  if (msg != null) box.write('dismissed_notice', msg);
+  isMessageVisible.value = false;
 }
 
 Future<void> refreshProfile() async {
@@ -588,6 +790,7 @@ final String? token = box.read('token');
 if (token == null || BatchSlots.find(batchLabel) == null) return false;
 
 isSavingBatch.value = true;
+_selfUpdateAt = DateTime.now(); // the update echo from the server is the student's own change
 try {
   final response = await http.put(
     Uri.parse("${ApiEndpoints.baseUrl}/user/batch-time"),
@@ -678,7 +881,6 @@ Get.defaultDialog(
 
       if (response.statusCode == 200) {
         clearLocalUserData();
-        await _firebaseAuth.signOut();
         Get.offAll(() => const WelcomeScreen());
         Get.snackbar(
           "Account Deleted",
@@ -722,11 +924,9 @@ titleStyle: const TextStyle(color: Colors.white),
 middleTextStyle: const TextStyle(color: Colors.white70),
 onConfirm: () async {
 clearLocalUserData();
-await _firebaseAuth.signOut();
 Get.back();
 Get.offAll(() => const WelcomeScreen());
 },
 );
 }
 }
-
