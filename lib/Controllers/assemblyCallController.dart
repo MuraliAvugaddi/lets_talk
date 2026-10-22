@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:stream_video_flutter/stream_video_flutter.dart';
+import 'package:lets_talk/rtc/live_room.dart'; // 🎧 LiveKit audio classes (same names as before)
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
@@ -93,7 +93,7 @@ class AssemblyCallController extends GetxController {
     try {
       final res = await http
           .post(
-            Uri.parse("${ApiEndpoints.baseUrl}/stream/prepare-call"),
+            Uri.parse("${ApiEndpoints.baseUrl}/rtc/prepare-call"),
             headers: _headers(json: true),
             body: jsonEncode({"userId": userId, "type": "assembly"}),
           )
@@ -197,8 +197,8 @@ class AssemblyCallController extends GetxController {
   void _onTick() {
     final c = call;
     if (c == null) return;
-    // Sir tapped "End for everyone"
-    if (c.state.value.endedAt != null) {
+    // Sir tapped "End for everyone" (or the connection is gone for good)
+    if (c.state.value.endedAt != null || c.state.value.status.isDisconnected) {
       _classEnded();
       return;
     }

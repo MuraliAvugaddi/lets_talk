@@ -3,14 +3,13 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  battery_plus
   connectivity_plus
   file_selector_windows
   firebase_core
   flutter_inappwebview_windows
+  flutter_webrtc
   geolocator_windows
-  permission_handler_windows
-  stream_webrtc_flutter
+  livekit_client
   url_launcher_windows
 )
 

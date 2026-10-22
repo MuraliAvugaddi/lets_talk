@@ -50,6 +50,31 @@ class _AccountScreenState extends State<AccountScreen> {
   final String onlineManagerPhone = "7386172347";
   final String techSupportPhone = "9398315945";
 
+  // 🔒 Privacy policy (same link as in App Store Connect / Play Console)
+  static const String privacyPolicyUrl = "https://sites.google.com/view/lets-speak-privacy-policy/home";
+
+  Future<void> _openPrivacyPolicy() async {
+    final Uri url = Uri.parse(privacyPolicyUrl);
+    // Opens inside the app (Safari / Chrome sheet) — falls back to the browser
+    bool ok = false;
+    try {
+      ok = await launchUrl(url, mode: LaunchMode.inAppBrowserView);
+    } catch (_) {}
+    if (!ok) {
+      try {
+        ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+    }
+    if (!ok) {
+      Get.snackbar(
+        "Could Not Open",
+        "Please open $privacyPolicyUrl in your browser.",
+        backgroundColor: AppColors.error,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   Future<void> _makePhoneCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     if (!await launchUrl(launchUri)) {
@@ -791,6 +816,26 @@ class _AccountScreenState extends State<AccountScreen> {
                     managerPhone: managerPhone,
                   );
                 }),
+
+                const SizedBox(height: 24),
+
+                // 🔒 PRIVACY
+                _sectionLabel(
+                  context,
+                  "PRIVACY",
+                  Icons.privacy_tip_rounded,
+                ),
+
+                const SizedBox(height: 10),
+
+                _actionCard(
+                  context: context,
+                  icon: Icons.privacy_tip_rounded,
+                  iconColor: AppColors.navy,
+                  title: "Privacy Policy",
+                  subtitle: "How we use and protect your data",
+                  onTap: _openPrivacyPolicy,
+                ),
 
                 const SizedBox(height: 24),
 

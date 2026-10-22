@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:lets_talk/Controllers/authContoller.dart';
-import 'package:lets_talk/apis/api_endpoint.dart';
-import 'package:lets_talk/Screens/widgets/LiveSessionWidget.dart' show StreamManager;
+import 'package:lets_talk/Screens/widgets/LiveSessionWidget.dart';
 import 'package:lets_talk/Screens/widgets/promo_popup.dart';
+import 'package:lets_talk/apis/api_endpoint.dart';
 
 /// Posters & reels the admin posted (e.g. "Dussehra — 10 days to go").
 /// • Shown once as a popup each time the student opens the app (X closes it).

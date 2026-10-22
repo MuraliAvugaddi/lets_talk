@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
 
+
 /// Admin's special-class switches — updated LIVE over the socket (no refresh needed):
 ///   🌐 rain     → offline students have their class ONLINE (reason in `onlineReason`)
 ///   🎙 assembly → special class: everyone joins one live class at the time the admin picked

@@ -9,8 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
-import 'package:stream_video_flutter/stream_video_flutter.dart';
-import 'package:stream_video_flutter/stream_video_flutter.dart' as svf show Priority;
+import 'package:lets_talk/rtc/live_room.dart'; // 🎧 LiveKit audio classes (same names as before)
+import 'package:lets_talk/rtc/live_room.dart' as svf show Priority;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
@@ -140,7 +140,7 @@ class StreamManager {
   static Future<void> _fetchToken(String userId, String userName) async {
     final res = await http
         .post(
-          Uri.parse("${ApiEndpoints.baseUrl}/stream/token"),
+          Uri.parse("${ApiEndpoints.baseUrl}/rtc/token"),
           headers: _authHeaders(json: true),
           body: jsonEncode({"userId": userId, "name": userName}),
         )
@@ -223,6 +223,8 @@ class StreamManager {
 // =========================================================================
 class GlobalAudioOverlayController {
   static OverlayEntry? _overlayEntry;
+  static StreamSubscription<CallState>? _endWatch; // ⚡ class ended while minimized
+  static String? attendanceId; // today's attendance record of the open class
   static Call? currentCall;
   static String? currentUserId;
   static String? currentClassName;
@@ -248,9 +250,50 @@ class GlobalAudioOverlayController {
     );
 
     overlayState.insert(_overlayEntry!);
+
+    // ⚡ The class screen is closed while minimized, so watch the class HERE:
+    // trainer ends / removes the student → close the bubble at once.
+    _endWatch?.cancel();
+    _endWatch = call.state.asStream().listen((s) {
+      if (s.endedAt != null || s.status.isDisconnected) {
+        _closedWhileMinimized(call, ended: s.endedAt != null);
+      }
+    });
+  }
+
+  static Future<void> _closedWhileMinimized(Call call, {required bool ended}) async {
+    if (ClassSwitcher.isSwitching(call) || !identical(call, currentCall)) return;
+    removeOverlay();
+    ClassSwitcher.stop();
+    final id = attendanceId;
+    attendanceId = null;
+    if (id != null) {
+      try {
+        await http.post(
+          Uri.parse(ApiEndpoints.leaveOnlineClass),
+          headers: _authHeaders(json: true),
+          body: jsonEncode({"attendanceId": id}),
+        );
+      } catch (_) {}
+    }
+    try {
+      await call.leave();
+    } catch (_) {}
+    StreamManager.inCall = false;
+    WakelockPlus.disable();
+    Get.snackbar(
+      ended ? "Class ended" : "Class closed",
+      ended ? "The trainer ended the class." : "You were removed from the class or the connection was lost.",
+      backgroundColor: AppColors.navy,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.all(14),
+    );
   }
 
   static void removeOverlay() {
+    _endWatch?.cancel();
+    _endWatch = null;
     try {
       _overlayEntry?.remove();
     } catch (_) {}
@@ -534,8 +577,9 @@ class ClassSwitcher {
     _attachTimer?.cancel();
     _attachTimer = Timer.periodic(const Duration(seconds: 10), (_) => _attachSocket());
     _pollTimer?.cancel();
-    // safety net if a socket message is missed (cheap: one request / 30 s)
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) => check());
+    // safety net if a socket message is missed — merges arrive LIVE by socket,
+    // so once a minute is plenty (2,000 phones × every 30 s was 67 requests/second)
+    _pollTimer = Timer.periodic(Duration(seconds: 60 + _rnd.nextInt(15)), (_) => check());
     Future.delayed(const Duration(seconds: 2), check);
   }
 
@@ -606,7 +650,7 @@ class ClassSwitcher {
     try {
       final res = await http
           .post(
-            Uri.parse("${ApiEndpoints.baseUrl}/stream/prepare-call"),
+            Uri.parse("${ApiEndpoints.baseUrl}/rtc/prepare-call"),
             headers: _authHeaders(json: true),
             body: jsonEncode({
               "userId": _userId,
@@ -848,7 +892,7 @@ class _LiveSessionWidgetState extends State<LiveSessionWidget> {
   Future<_ClassStatus> _classStatus(String section) async {
     final res = await http
         .post(
-          Uri.parse("${ApiEndpoints.baseUrl}/stream/prepare-call"),
+          Uri.parse("${ApiEndpoints.baseUrl}/rtc/prepare-call"),
           headers: _authHeaders(json: true),
           body: jsonEncode({
             "userId": _userId,
@@ -1518,6 +1562,13 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
       return;
     }
 
+    // ⚡ LiveKit already retried the connection itself — "disconnected" is final
+    // (removed by the trainer / room closed / network gone). Leave now, no 5 s wait.
+    if (s.status.isDisconnected) {
+      _handleClassExit(message: "You were removed from the class or the connection was lost.");
+      return;
+    }
+
     final me = s.callParticipants.firstWhereOrNull(
       (p) => p.userId == widget.userId,
     );
@@ -1631,6 +1682,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
           setState(() => _outsideBatchOwn = data['ownBatch']?.toString() ?? '');
         }
         _attendanceId = data['attendanceId']?.toString();
+        GlobalAudioOverlayController.attendanceId = _attendanceId; // minimized class can close it
         if (_attendanceId == null || _attendanceId!.isEmpty) return;
         _syncTimer?.cancel();
         _syncTimer = Timer.periodic(const Duration(minutes: 1), (_) => _syncOnline());
@@ -1660,6 +1712,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     _syncTimer?.cancel();
     final id = _attendanceId;
     _attendanceId = null;
+    GlobalAudioOverlayController.attendanceId = null;
     if (id == null) return;
     try {
       await http.post(

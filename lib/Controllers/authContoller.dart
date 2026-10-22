@@ -156,7 +156,8 @@ socket!.onReconnect((_) {
 });
 
 _noticePoll?.cancel();
-_noticePoll = Timer.periodic(const Duration(seconds: 30), (_) => fetchNotice());
+// notices arrive LIVE by socket; this is only a safety net (30 s × 2,500 phones was 80 requests/second)
+_noticePoll = Timer.periodic(const Duration(minutes: 3), (_) => fetchNotice());
 
 // ⚡ LIVE PERMISSION & MODE UPDATE FROM ADMIN
 // Several updates within 1.5 s (admin saving access + timing + section) → ONE refresh.
