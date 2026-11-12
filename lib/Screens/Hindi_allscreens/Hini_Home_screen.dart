@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/classModeController.dart';
@@ -329,7 +327,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (ClassModeController.to.assemblyOn) _buildAssemblyCard(),
-                              if (ClassModeController.to.rainOn &&
+                              if (ClassModeController.to.rainCoversAny(authController.userData['hindiAccess']) &&
                                   (authController.userData['mode'] ?? 'online').toString().toLowerCase() == 'offline')
                                 _buildRainNotice(),
                               _buildProgressHero(
@@ -717,7 +715,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
+              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}${ClassModeController.to.rainStagesText.isNotEmpty ? '${ClassModeController.to.rainStagesText}: ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
               style: GoogleFonts.poppins(color: AppColors.blue, fontSize: 10.5, fontWeight: FontWeight.w600, height: 1.35),
             ),
           ),

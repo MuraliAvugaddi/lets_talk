@@ -18,6 +18,7 @@ import 'package:lets_talk/Screens/auth/welcome_screen.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:lets_talk/apis/batch_slots.dart';
 import 'package:lets_talk/services/class_reminder.dart'; // ⏰ class reminders
+import 'package:lets_talk/services/push_service.dart'; // 🔔 notifications
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:smart_auth/smart_auth.dart'; // 📩 Android: read the OTP SMS automatically
 
@@ -121,6 +122,7 @@ userData.value = {};
 // REAL-TIME SOCKET & PERMISSION LISTENERS
 // ==========================================
 void initSocket() {
+PushService.register(); // 🔔 give this phone to the server for notifications
 final user = box.read('user');
 final String? userId = user != null ? (user['id'] ?? user['_id']) : null;
 if (userId == null) return;
@@ -853,23 +855,13 @@ final String? userId = user != null ? (user['id'] ?? user['_id']) : null;
 String? token = box.read('token');
 if (userId == null || token == null) return;
 
-Get.defaultDialog(
-  title: "Delete Account",
-  titleStyle: GoogleFonts.poppins(
-    color: Colors.redAccent,
-    fontWeight: FontWeight.bold,
-  ),
-  middleText:
-      "Are you sure you want to permanently delete your account? This action cannot be undone.",
-  middleTextStyle: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-  backgroundColor: const Color(0xff14141E),
-  radius: 16,
-  textConfirm: "Delete Forever",
-  textCancel: "Cancel",
-  confirmTextColor: Colors.white,
-  buttonColor: Colors.redAccent,
+_confirmDialog(
+  icon: Icons.delete_forever_rounded,
+  color: AppColors.error,
+  title: "Delete account?",
+  message: "Your account, progress and attendance will be removed for ever. This cannot be undone.",
+  confirmText: "Delete",
   onConfirm: () async {
-    Get.back();
     isLoading.value = true;
     try {
       final response = await http.delete(
@@ -881,27 +873,28 @@ Get.defaultDialog(
       );
 
       if (response.statusCode == 200) {
+        await PushService.unregister();
         clearLocalUserData();
         Get.offAll(() => const WelcomeScreen());
         Get.snackbar(
           "Account Deleted",
           "Your account has been deleted permanently.",
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.error,
           colorText: Colors.white,
         );
       } else {
         Get.snackbar(
           "Error",
           "Could not delete account. Please try again.",
-          backgroundColor: Colors.redAccent,
+          backgroundColor: AppColors.error,
           colorText: Colors.white,
         );
       }
     } catch (e) {
       Get.snackbar(
         "Error",
-        "Connection failed: $e",
-        backgroundColor: Colors.redAccent,
+        "Connection failed. Please try again.",
+        backgroundColor: AppColors.error,
         colorText: Colors.white,
       );
     } finally {
@@ -909,25 +902,119 @@ Get.defaultDialog(
     }
   },
 );
-
 }
 
 void logout() {
-Get.defaultDialog(
-title: "Logout",
-middleText: "Are you sure you want to logout?",
-textConfirm: "Yes",
-textCancel: "No",
-confirmTextColor: Colors.white,
-buttonColor: Colors.redAccent,
-backgroundColor: const Color(0xff1E1E1E),
-titleStyle: const TextStyle(color: Colors.white),
-middleTextStyle: const TextStyle(color: Colors.white70),
-onConfirm: () async {
-clearLocalUserData();
-Get.back();
-Get.offAll(() => const WelcomeScreen());
-},
+_confirmDialog(
+  icon: Icons.logout_rounded,
+  color: AppColors.yellow,
+  title: "Log out?",
+  message: "You can log in again any time with your phone number and password.",
+  confirmText: "Log out",
+  onConfirm: () async {
+    await PushService.unregister(); // 🔕 stop notifications for this account on this phone
+    clearLocalUserData();
+    Get.offAll(() => const WelcomeScreen());
+  },
 );
+}
+
+// ==========================================
+// 🎨 One confirm popup in the app's own style (light + dark)
+// ==========================================
+void _confirmDialog({
+  required IconData icon,
+  required Color color,
+  required String title,
+  required String message,
+  required String confirmText,
+  required Future<void> Function() onConfirm,
+}) {
+  final bool isDark = Get.isDarkMode;
+  final Color surface = isDark ? AppColors.darkSurface : AppColors.surface;
+  final Color text = isDark ? AppColors.darkText : AppColors.text;
+  final Color secondary = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+  final Color border = isDark ? AppColors.darkBorder : AppColors.border;
+  final bool danger = color == AppColors.error;
+
+  Get.dialog(
+    Dialog(
+      backgroundColor: surface,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(26),
+        side: BorderSide(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 26, 22, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.13),
+              ),
+              child: Icon(icon, color: color, size: 29),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(color: text, fontSize: 19, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(color: secondary, fontSize: 12.5, height: 1.5),
+            ),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: text,
+                        side: BorderSide(color: border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      ),
+                      child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Get.back();
+                        await onConfirm();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: danger ? AppColors.error : AppColors.navy,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size(0, 48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      ),
+                      child: Text(confirmText, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 }

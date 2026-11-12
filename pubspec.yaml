@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.0.4+9
+version: 2.0.4+10
 
 environment:
   sdk: ^3.10.1
@@ -64,6 +64,8 @@ dependencies:
   package_info_plus: ^10.2.2
   smart_auth: ^3.2.0
   livekit_client: ^2.5.0
+  share_plus: ^13.3.1
+  gal: ^2.3.2
   
 dev_dependencies:
   flutter_test:
@@ -94,6 +96,8 @@ flutter:
     - assets/images/let's speak.png
     - assets/images/logo4x.png
     - assets/images/paymentqrcode.png
+    - assets/images/final lets speak icon.png
+    - assets/images/let's speak icon in.png
     - assets/images/navy blue logo let's speak.png
     - assets/images/satge1/Day-2_English_ST-1_(Past Be).pdf
     - assets/images/satge1/Day-3_English_ST-1 (Past Be).pdf
@@ -344,9 +348,9 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/Frame icon.png"
-  adaptive_icon_background: "#1EA7E1"
-  adaptive_icon_foreground: "assets/images/Frame icon.png"  
+  image_path: "assets/images/final lets speak icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/final lets speak icon.png"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

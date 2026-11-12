@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/connectivityController.dart';
@@ -12,7 +11,6 @@ import 'package:lets_talk/Controllers/promoController.dart';
 import 'package:lets_talk/Controllers/classModeController.dart';
 import 'package:lets_talk/Screens/widgets/assembly_join_screen.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
-import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:lets_talk/services/app_update_checker.dart';
 import 'package:lets_talk/services/class_reminder.dart';
 
@@ -600,7 +598,8 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
         'online';
     final classMode = ClassModeController.to;
     // 🌧 Rain day: offline students get the online class buttons too
-    final bool rainForMe = !isOnlineStudent && classMode.rainOn;
+    //    admin may move only some stages online → only those stages show
+    final bool rainForMe = !isOnlineStudent && classMode.rainCoversAny(authController.userData['englishAccess']);
     final bool showOnlineClasses = isOnlineStudent || rainForMe;
 
     final int unlocked = _unlockedStages();
@@ -708,7 +707,10 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
         'dest': const EnglishOnlineStage7Screen(),
         'isLocked': _isStageLocked('stage7'),
       },
-    ];
+    ]
+        // offline student on an "online day": only the stages the admin moved online
+        .where((e) => isOnlineStudent || classMode.rainCovers('stage${e['stageNum']}'))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -893,7 +895,7 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
+              '${ClassModeController.to.onlineReason.isNotEmpty ? '${ClassModeController.to.onlineReason} • ' : ''}${ClassModeController.to.rainStagesText.isNotEmpty ? '${ClassModeController.to.rainStagesText}: ' : ''}Today your class is ONLINE. Join from "Interactive Classes" at your usual time — your trainer teaches there.',
               style: GoogleFonts.poppins(color: AppColors.blue, fontSize: 10.5, fontWeight: FontWeight.w600, height: 1.35),
             ),
           ),

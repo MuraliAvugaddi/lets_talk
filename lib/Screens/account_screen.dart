@@ -12,6 +12,7 @@ import 'package:lets_talk/Controllers/ThemeController.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Screens/student_attendance_screen.dart';
+import 'package:lets_talk/Screens/edit_profile_screen.dart';
 import 'package:lets_talk/Screens/student_test_results_screen.dart';
 import 'package:lets_talk/Screens/leaderboard_screen.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
@@ -399,6 +400,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   final mode = (controller.userData['mode'] ?? "online")
                       .toString();
                   final isOnline = mode.toLowerCase() == "online";
+                  final photoUrl = (controller.userData['photoUrl'] ?? '').toString();
 
                   // ---- numbers for the quick-stats row ----
                   int stagesOn(dynamic m) => m is Map ? m.values.where((v) => v == true).length : 0;
@@ -508,16 +510,32 @@ class _AccountScreenState extends State<AccountScreen> {
                                           end: Alignment.bottomRight,
                                         ),
                                       ),
-                                      child: Container(
-                                        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          initials.isEmpty ? "U" : initials,
-                                          style: GoogleFonts.poppins(
-                                            color: AppColors.navy,
-                                            fontSize: initials.length > 1 ? 26 : 32,
-                                            fontWeight: FontWeight.w800,
-                                          ),
+                                      child: GestureDetector(
+                                        onTap: () => Get.to(() => const EditProfileScreen()),
+                                        child: Container(
+                                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                                          alignment: Alignment.center,
+                                          clipBehavior: Clip.antiAlias,
+                                          child: photoUrl.isNotEmpty
+                                              ? Image.network(
+                                                  photoUrl,
+                                                  width: 75,
+                                                  height: 75,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => Text(
+                                                    initials.isEmpty ? "U" : initials,
+                                                    style: GoogleFonts.poppins(
+                                                        color: AppColors.navy, fontSize: 26, fontWeight: FontWeight.w800),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  initials.isEmpty ? "U" : initials,
+                                                  style: GoogleFonts.poppins(
+                                                    color: AppColors.navy,
+                                                    fontSize: initials.length > 1 ? 26 : 32,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
                                         ),
                                       ),
                                     ),
@@ -569,6 +587,30 @@ class _AccountScreenState extends State<AccountScreen> {
                                       chip(isOnline ? Icons.wifi_rounded : Icons.location_on_rounded,
                                           isOnline ? 'ONLINE STUDENT' : 'OFFLINE STUDENT'),
                                       chip(Icons.verified_rounded, "LET'S SPEAK MEMBER"),
+                                      // ✏️ edit name / photo / phone
+                                      GestureDetector(
+                                        onTap: () => Get.to(() => const EditProfileScreen()),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.yellow,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.edit_rounded, size: 13, color: AppColors.deepNavy),
+                                              const SizedBox(width: 5),
+                                              Text('EDIT PROFILE',
+                                                  style: GoogleFonts.poppins(
+                                                      color: AppColors.deepNavy,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                      letterSpacing: 0.4)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),

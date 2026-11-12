@@ -21,6 +21,30 @@ class ClassModeController extends GetxController {
   bool get rainOn => rain.value?['active'] == true;
   bool get assemblyOn => assembly.value?['active'] == true;
   String get onlineReason => (rain.value?['note'] ?? '').toString();
+
+  /// Stages the admin moved online today (empty = ALL stages)
+  List<String> get rainStages {
+    final st = rain.value?['stages'];
+    return st is List ? st.map((e) => e.toString().toLowerCase()).toList() : const [];
+  }
+
+  /// Is THIS stage ("stage1") online today?
+  bool rainCovers(String stage) {
+    if (!rainOn) return false;
+    final list = rainStages;
+    return list.isEmpty || list.contains(stage.toLowerCase().replaceAll(' ', ''));
+  }
+
+  /// Any of my open stages online today? access = userData['englishAccess'] / ['hindiAccess']
+  bool rainCoversAny(dynamic access) {
+    if (!rainOn) return false;
+    if (rainStages.isEmpty) return true;
+    if (access is! Map) return false;
+    return access.entries.any((e) => e.value == true && rainCovers(e.key.toString()));
+  }
+
+  /// "Stage 1, Stage 3" (for the banner); empty when all stages
+  String get rainStagesText => rainStages.map((s) => s.replaceAll('stage', 'Stage ')).join(', ');
   String get assemblyTitle {
     final t = (assembly.value?['title'] ?? '').toString().trim();
     return t.isEmpty ? 'Surendra Sir Special Class' : t;

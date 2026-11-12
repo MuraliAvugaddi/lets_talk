@@ -11,6 +11,7 @@ import 'package:lets_talk/Controllers/connectivityController.dart';
 import 'package:lets_talk/Screens/auth/splash_screen.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/services/class_reminder.dart';
+import 'package:lets_talk/services/push_service.dart'; // 🔔 notifications
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,9 @@ Future<void> main() async {
 
   // ⏰ Class reminders (5 min before class, with sound) — never blocks app start
   ClassReminder.init();
+
+  // 🔔 Notifications from the server (notice, fee, test, special class …)
+  await PushService.init();
 
   // 🚀 Force immediate status bar style on app launch to match header gradient
   SystemChrome.setSystemUIOverlayStyle(

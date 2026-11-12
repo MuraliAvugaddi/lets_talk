@@ -43,7 +43,8 @@ class AssemblyCallController extends GetxController {
   bool _socketOn = false;
 
   OverlayEntry? _bubble;
-  Offset bubblePos = const Offset(12, 120);
+  // Rx → the bubble really moves while dragging (a plain field never rebuilt the const bubble)
+  final bubblePos = const Offset(12, 120).obs;
 
   AuthController get _auth => Get.find<AuthController>();
   String get userId => (_auth.userData['id'] ?? _auth.userData['_id'] ?? '').toString();
@@ -76,6 +77,9 @@ class AssemblyCallController extends GetxController {
     if (!_socketOn) {
       // ⚡ Sir went live → join now (random delay so 2,500 phones don't hit at the same second)
       _auth.socket?.on('assembly_live', _onLiveEvent);
+      // ⛔ Sir / admin ended the special class → close it at once (also when minimized)
+      _auth.socket?.on('assembly_ended', _onEndedEvent);
+      _auth.socket?.on('class_mode_update', _onModeEvent);
       _socketOn = true;
     }
     connect();
@@ -84,7 +88,18 @@ class AssemblyCallController extends GetxController {
   void _onLiveEvent(dynamic _) {
     if (phase.value != AssemblyPhase.waiting) return;
     _retry?.cancel();
-    _retry = Timer(Duration(milliseconds: 300 + _rnd.nextInt(4000)), connect);
+    // spread 2,000 joins over ~6 s → nobody waits for a crowded server
+    _retry = Timer(Duration(milliseconds: 300 + _rnd.nextInt(6000)), connect);
+  }
+
+  void _onEndedEvent(dynamic _) {
+    if (isActive) _classEnded();
+  }
+
+  void _onModeEvent(dynamic data) {
+    if (!isActive || data is! Map) return;
+    final a = data['assembly'];
+    if (a == null || (a is Map && a['active'] != true)) _classEnded();
   }
 
   Future<void> connect() async {
@@ -118,6 +133,7 @@ class AssemblyCallController extends GetxController {
       phase.value = AssemblyPhase.joining;
       final client = await StreamManager.clientFor(userId: userId, userName: _userName);
       final c = client.makeCall(callType: StreamCallType.defaultType(), id: data['callId'].toString());
+      c.lightweight = true; // 2,000 people: don't track every person on every phone
       final joined = await c.join(
         connectOptions: CallConnectOptions(
           camera: TrackOption.disabled(),
@@ -187,7 +203,11 @@ class AssemblyCallController extends GetxController {
     return me.isNotEmpty && me.first.isAudioEnabled;
   }
 
+  /// me + who is speaking (lightweight mode)
   List<CallParticipantState> get participants => call?.state.value.callParticipants ?? const [];
+
+  /// everyone in the class
+  int get peopleCount => call?.peopleCount ?? 0;
 
   String get speakingName {
     final s = participants.where((p) => p.isSpeaking && !p.isLocal).toList();
@@ -207,15 +227,23 @@ class AssemblyCallController extends GetxController {
     tick.value++;
   }
 
+  bool _ending = false;
+
+  /// Sir ended the class → leave, close the bubble AND the class page, back to Home.
   Future<void> _classEnded() async {
-    final wasMinimized = minimized.value;
-    await leave();
-    if (wasMinimized) {
-      Get.snackbar('Class finished', '$title has ended. Thank you!',
+    if (_ending) return;
+    _ending = true;
+    try {
+      final wasMinimized = minimized.value;
+      await leave();
+      if (!wasMinimized && AssemblyJoinScreen.isOpen) {
+        // class page is open → go back to Home
+        Get.until((route) => route.isFirst);
+      }
+      Get.snackbar('Class finished ✅', '$title has ended. Thank you!',
           backgroundColor: const Color(0xFF0E466D), colorText: Colors.white, snackPosition: SnackPosition.TOP);
-    } else {
-      errorText.value = '$title has ended. Thank you!';
-      phase.value = AssemblyPhase.error;
+    } finally {
+      _ending = false;
     }
   }
 
@@ -280,6 +308,8 @@ class AssemblyCallController extends GetxController {
     _tick?.cancel();
     if (_socketOn) {
       _auth.socket?.off('assembly_live', _onLiveEvent);
+      _auth.socket?.off('assembly_ended', _onEndedEvent);
+      _auth.socket?.off('class_mode_update', _onModeEvent);
       _socketOn = false;
     }
     _hideBubble();
@@ -327,7 +357,10 @@ class AssemblyCallController extends GetxController {
     if (_bubble != null || !minimized.value) return;
     final overlay = Get.key.currentState?.overlay;
     if (overlay == null) return;
-    _bubble = OverlayEntry(builder: (_) => const _AssemblyBubble());
+    _bubble = OverlayEntry(builder: (_) => Obx(() {
+          final pos = bubblePos.value; // rebuild on drag
+          return Positioned(left: pos.dx, top: pos.dy, child: const _AssemblyBubble());
+        }));
     overlay.insert(_bubble!);
   }
 
@@ -338,11 +371,11 @@ class AssemblyCallController extends GetxController {
   }
 
   void moveBubble(Offset delta, Size screen) {
-    bubblePos = Offset(
-      (bubblePos.dx + delta.dx).clamp(0.0, max(0.0, screen.width - 250)),
-      (bubblePos.dy + delta.dy).clamp(30.0, max(30.0, screen.height - 110)),
+    final p = bubblePos.value;
+    bubblePos.value = Offset(
+      (p.dx + delta.dx).clamp(0.0, max(0.0, screen.width - 250)),
+      (p.dy + delta.dy).clamp(30.0, max(30.0, screen.height - 110)),
     );
-    _bubble?.markNeedsBuild();
   }
 
   @override
@@ -362,10 +395,7 @@ class _AssemblyBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = AssemblyCallController.to;
     final size = MediaQuery.of(context).size;
-    return Positioned(
-      left: ctrl.bubblePos.dx,
-      top: ctrl.bubblePos.dy,
-      child: GestureDetector(
+    return GestureDetector(
         onPanUpdate: (d) => ctrl.moveBubble(d.delta, size),
         onTap: ctrl.restore,
         child: Material(
@@ -450,7 +480,6 @@ class _AssemblyBubble extends StatelessWidget {
             );
           }),
         ),
-      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:lets_talk/Screens/MainNavigationScreen.dart';
+import 'package:lets_talk/Screens/class_hand_chat.dart';
 import 'package:lets_talk/rtc/live_room.dart'; // 🎧 LiveKit audio classes (same names as before)
 import 'package:lets_talk/rtc/live_room.dart' as svf show Priority;
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -1529,6 +1530,17 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     _sub = widget.call.state.asStream().listen(_onCallState);
     _onCallState(widget.call.state.value);
 
+    // ✋ raise hand + ask the trainer
+    StudentClassChat.instance.attach(widget.call);
+    StudentClassChat.instance.onNotice = (text, kind) {
+      if (!mounted) return;
+      _notice(
+        text,
+        kind == 'msg' ? Icons.chat_bubble_rounded : (kind == 'ok' ? Icons.mic_rounded : Icons.pan_tool_alt_rounded),
+        kind == 'ok' ? AppColors.success : AppColors.navy,
+      );
+    };
+
     // 🔀 admin merges / unmerges sections → move to the right class by itself
     ClassSwitcher.watch(widget.call, widget.widgetRef, widget.userId);
 
@@ -1542,6 +1554,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
 
   @override
   void dispose() {
+    StudentClassChat.instance.onNotice = null; // minimized: hand + messages stay
     _sub?.cancel();
     _syncTimer?.cancel();
     _netTimer?.cancel();
@@ -1743,6 +1756,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     _isExiting = true;
     ClassSwitcher.stop();
     _missingTimer?.cancel();
+    StudentClassChat.instance.detach();
 
     await _recordOnlineLeave();
     WakelockPlus.disable();
@@ -2436,15 +2450,18 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
         : AppColors.success;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+      padding: const EdgeInsets.fromLTRB(6, 12, 6, 12),
       decoration: BoxDecoration(
         color: cardColor,
         border: Border(top: BorderSide(color: roomBorder)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end, // every label on one line, same baseline
         children: [
-          _sideButton(Icons.picture_in_picture_alt_rounded, "Minimize", accent, _minimize),
+          Expanded(child: _sideButton(Icons.picture_in_picture_alt_rounded, "Minimize", accent, _minimize)),
+          Expanded(child: _handButton()),
           Expanded(
+            flex: 2,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -2452,8 +2469,8 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                   onTap: isToggling ? null : () => _toggleMic(isMuted, canSpeak),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 70,
-                    height: 70,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       color: micColor,
                       shape: BoxShape.circle,
@@ -2485,52 +2502,121 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  locked
-                      ? "Mic locked"
-                      : isMuted
-                      ? "Tap to speak"
-                      : "You're live — tap to mute",
-                  style: GoogleFonts.poppins(
-                    color: roomText,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    locked
+                        ? "Mic locked"
+                        : isMuted
+                        ? "Tap to speak"
+                        : "Live • tap to mute",
+                    maxLines: 1,
+                    style: GoogleFonts.poppins(
+                      color: isMuted ? roomText : AppColors.success,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          _sideButton(Icons.call_end_rounded, "Leave", AppColors.error, _confirmLeaveClass),
+          Expanded(child: _chatButton()),
+          Expanded(child: _sideButton(Icons.call_end_rounded, "Leave", AppColors.error, _confirmLeaveClass)),
         ],
       ),
     );
   }
 
-  Widget _sideButton(IconData icon, String label, Color color, VoidCallback onTap) {
+  // ✋ Raise / lower hand
+  Widget _handButton() {
+    return Obx(() {
+      final up = StudentClassChat.instance.handUp.value;
+      return _sideButton(
+        up ? Icons.pan_tool_rounded : Icons.pan_tool_outlined,
+        up ? "Hand up" : "Raise hand",
+        up ? AppColors.warning : accent,
+        () async {
+          final err = await StudentClassChat.instance.toggleHand();
+          if (err != null) {
+            _notice(err, Icons.info_outline_rounded, AppColors.warning);
+          } else if (StudentClassChat.instance.handUp.value) {
+            _notice("Hand raised ✋ Your trainer can see it.", Icons.pan_tool_rounded, AppColors.navy);
+          }
+        },
+        filled: up,
+      );
+    });
+  }
+
+  // 💬 Ask the trainer (red number = new message from the trainer)
+  Widget _chatButton() {
+    return Obx(() {
+      final n = StudentClassChat.instance.unread.value;
+      return _sideButton(
+        Icons.chat_bubble_outline_rounded,
+        "Ask",
+        accent,
+        () => showStudentChatSheet(context),
+        badge: n,
+      );
+    });
+  }
+
+  /// One bottom-bar button: round icon + one-line label (all buttons line up)
+  Widget _sideButton(IconData icon, String label, Color color, VoidCallback onTap,
+      {bool filled = false, int badge = 0}) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
-      child: SizedBox(
-        width: 64,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: color.withOpacity(.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 21),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: filled ? color : color.withOpacity(.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: filled ? Colors.white : color, size: 21),
+                ),
+                if (badge > 0)
+                  Positioned(
+                    right: -4,
+                    top: -3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: cardColor, width: 1.5),
+                      ),
+                      child: Text(
+                        badge > 9 ? "9+" : "$badge",
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: roomSecondary,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: GoogleFonts.poppins(
+                  color: filled ? color : roomSecondary,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -2538,4 +2624,4 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
       ),
     );
   }
-}
+} 

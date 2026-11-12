@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:lets_talk/services/promo_share.dart';
 
 /// Full-screen popup with the admin's posters, reels and Instagram reels.
 /// Made simple for kids:
@@ -25,7 +26,7 @@ class PromoPopup extends StatefulWidget {
       context: context,
       barrierDismissible: false,
       barrierLabel: 'Announcement',
-      barrierColor: Colors.black.withValues(alpha: 0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.95),
       transitionDuration: const Duration(milliseconds: 260),
       pageBuilder: (_, __, ___) => PromoPopup(promos: promos),
       transitionBuilder: (_, anim, __, child) => FadeTransition(
@@ -78,6 +79,12 @@ class _PromoPopupState extends State<PromoPopup> {
   double _reelSeconds = 0; // reel length (from the player)
   bool _paused = false; // student paused the reel / opened zoom
   bool _closing = false;
+
+  // 📥 📤 download / share
+  bool _hold = false; // student tapped Download / Share → don't move on by itself
+  String? _busy; // 'download' | 'share' | 'status'
+  String? _toast;
+  Timer? _toastTimer;
 
   @override
   void initState() {
@@ -133,6 +140,7 @@ class _PromoPopupState extends State<PromoPopup> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _toastTimer?.cancel();
     pageCtrl.dispose();
     super.dispose();
   }
@@ -142,7 +150,7 @@ class _PromoPopupState extends State<PromoPopup> {
   /// Posters and Instagram reels use a timer; uploaded reels follow the video itself.
   void _tick() {
     final it = _current;
-    if (it == null || _closing || _paused || it.kind == _Kind.reel) return;
+    if (it == null || _closing || _paused || _hold || it.kind == _Kind.reel) return;
     final total = (it.kind == _Kind.poster ? PromoPopup.posterSeconds : PromoPopup.instagramSeconds).toDouble();
     _elapsed += 0.1;
     setState(() => _progress = (_elapsed / total).clamp(0, 1));
@@ -156,7 +164,10 @@ class _PromoPopupState extends State<PromoPopup> {
     setState(() => _progress = (position / duration).clamp(0, 1));
   }
 
-  void _onReelFinished() => _next();
+  void _onReelFinished() {
+    if (_hold) return; // student is sharing / downloading → stay on this reel
+    _next();
+  }
 
   void _onReelFailed() {
     // could not play → treat it like a poster (closes after 10 s)
@@ -190,7 +201,231 @@ class _PromoPopupState extends State<PromoPopup> {
       _progress = 0;
       _reelSeconds = 0;
       _paused = false;
+      _hold = false;
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // 📥 Download  /  📤 Share  /  🟢 WhatsApp Status
+  // ---------------------------------------------------------------------
+  void _showToast(String text) {
+    if (!mounted) return;
+    _toastTimer?.cancel();
+    setState(() => _toast = text);
+    _toastTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _toast = null);
+    });
+  }
+
+  Future<void> _download(_PromoItem it) async {
+    if (_busy != null) return;
+    setState(() {
+      _hold = true;
+      _busy = 'download';
+    });
+    final msg = await PromoShare.download(
+      url: it.url,
+      video: it.kind == _Kind.reel,
+      fallbackUrl: it.fallbackUrl,
+    );
+    if (!mounted) return;
+    setState(() => _busy = null);
+    _showToast(msg);
+  }
+
+  Future<void> _share(BuildContext btnContext, _PromoItem it, {bool status = false}) async {
+    if (_busy != null) return;
+    setState(() {
+      _hold = true;
+      _busy = status ? 'status' : 'share';
+    });
+    if (status) _showToast('Choose WhatsApp → "My status" ✅');
+    if (it.kind == _Kind.instagram) {
+      await PromoShare.shareLink(
+        context: btnContext,
+        link: it.openUrl.isNotEmpty ? it.openUrl : it.url,
+        title: it.title,
+        caption: it.caption,
+      );
+      if (mounted) setState(() => _busy = null);
+      return;
+    }
+    final err = await PromoShare.shareFile(
+      context: btnContext,
+      url: it.url,
+      video: it.kind == _Kind.reel,
+      title: it.title,
+      caption: it.caption,
+      fallbackUrl: it.fallbackUrl,
+    );
+    if (!mounted) return;
+    setState(() => _busy = null);
+    if (err != null) _showToast(err);
+  }
+
+  Widget _actions(_PromoItem it) {
+    final hasFile = it.url.isNotEmpty && it.kind != _Kind.instagram;
+    final hasLink = it.kind == _Kind.instagram && (it.openUrl.isNotEmpty || it.url.isNotEmpty);
+    if (!hasFile && !hasLink) return const SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // small message (saved / choose My status …)
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: _toast == null
+              ? const SizedBox(width: double.infinity, height: 0)
+              : Container(
+                  key: ValueKey(_toast),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12)],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _toast!.contains('✅') ? Icons.check_circle_rounded : Icons.info_rounded,
+                        color: _toast!.contains('✅') ? const Color(0xFF16A66A) : const Color(0xFFE59E1B),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _toast!,
+                          style: GoogleFonts.poppins(color: const Color(0xFF173A52), fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+
+        // one clean action bar: [Save] [Status]  [ Share ───────── ]
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Row(
+            children: [
+              if (hasFile) ...[
+                _actionTile(
+                  icon: Icons.download_rounded,
+                  label: 'Save',
+                  color: Colors.white,
+                  busy: _busy == 'download',
+                  onTap: (_) => _download(it),
+                ),
+                const SizedBox(width: 8),
+              ],
+              _actionTile(
+                icon: Icons.motion_photos_on_rounded,
+                label: 'Status',
+                color: const Color(0xFF25D366),
+                busy: _busy == 'status',
+                onTap: (ctx) => _share(ctx, it, status: true),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: _shareButton(it)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Small square button (Save / Status)
+  Widget _actionTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool busy,
+    required void Function(BuildContext) onTap,
+  }) {
+    return Builder(
+      builder: (ctx) => Material(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _busy == null ? () => onTap(ctx) : null,
+          child: SizedBox(
+            width: 64,
+            height: 56,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                busy
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.2, color: color),
+                      )
+                    : Icon(icon, color: color, size: 22),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Big main button: Share (WhatsApp, Instagram, Telegram …)
+  Widget _shareButton(_PromoItem it) {
+    final busy = _busy == 'share';
+    return Builder(
+      builder: (ctx) => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFFE1306C), Color(0xFFF77737)]),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFFE1306C).withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _busy == null ? () => _share(ctx, it) : null,
+            child: SizedBox(
+              height: 56,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  busy
+                      ? const SizedBox(
+                          width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white))
+                      : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Share',
+                          style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, height: 1.1)),
+                      Text('WhatsApp • Instagram',
+                          style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.85), fontSize: 9.5, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _close() {
@@ -330,16 +565,17 @@ class _PromoPopupState extends State<PromoPopup> {
 
               // ---- caption + hint ----
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
                 child: Column(
                   children: [
-                    if (current.title.isNotEmpty)
+                    // a pasted link is not a nice title → don't show it
+                    if (current.title.isNotEmpty && !current.title.trim().toLowerCase().startsWith('http'))
                       Text(
                         current.title,
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, height: 1.25),
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700, height: 1.25),
                       ),
                     if (current.caption.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -351,14 +587,16 @@ class _PromoPopupState extends State<PromoPopup> {
                         style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.78), fontSize: 12, height: 1.4),
                       ),
                     ],
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    _actions(current), // 💾 Save • 🟢 Status • 📤 Share
+                    const SizedBox(height: 10),
                     Text(
-                      _paused
-                          ? 'Paused'
+                      (_paused || _hold)
+                          ? 'Paused • tap Close when done'
                           : index < items.length - 1
-                              ? 'Next post in ${left}s  •  swipe →'
-                              : (left > 0 ? 'Going back home in ${left}s' : ''),
-                      style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                              ? (left > 0 ? 'Next in ${left}s  •  swipe for more' : 'Swipe for more')
+                              : (left > 0 ? 'Closing in ${left}s' : ''),
+                      style: GoogleFonts.poppins(color: Colors.white.withValues(alpha: 0.5), fontSize: 10.5),
                     ),
                   ],
                 ),
