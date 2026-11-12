@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:lets_talk/apis/api_headers.dart';
 import 'package:intl/intl.dart';
 
 import 'package:lets_talk/Controllers/authContoller.dart';
@@ -54,6 +55,7 @@ class _StudentTestResultsScreenState extends State<StudentTestResultsScreen> {
         Uri.parse(
           "${ApiEndpoints.myResults}?userId=$userId&language=$language",
         ),
+        headers: ApiHeaders.auth(), // 🔐 login token
       );
 
       if (response.statusCode == 200) {

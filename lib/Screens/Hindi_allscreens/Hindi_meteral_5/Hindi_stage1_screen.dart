@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:lets_talk/apis/api_headers.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lets_talk/Screens/English_meteral_5/English_stage1_screen.dart';
@@ -652,6 +653,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
     try {
       final response = await http.get(
         Uri.parse("${ApiEndpoints.myAttendance}?userId=$userId"),
+        headers: ApiHeaders.auth(), // 🔐 login token
       );
 
       if (response.statusCode == 200) {

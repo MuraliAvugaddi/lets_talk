@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:lets_talk/apis/api_headers.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
@@ -107,6 +108,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
     try {
       final response = await http.get(
         Uri.parse("${ApiEndpoints.myAttendance}?userId=$userId"),
+        headers: ApiHeaders.auth(), // 🔐 login token
       );
 
       if (response.statusCode == 200) {
