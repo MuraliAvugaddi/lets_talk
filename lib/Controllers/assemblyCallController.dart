@@ -88,8 +88,9 @@ class AssemblyCallController extends GetxController {
   void _onLiveEvent(dynamic _) {
     if (phase.value != AssemblyPhase.waiting) return;
     _retry?.cancel();
-    // spread 2,000 joins over ~6 s → nobody waits for a crowded server
-    _retry = Timer(Duration(milliseconds: 300 + _rnd.nextInt(6000)), connect);
+    // spread 2,000 joins over ~20 s → the server answers everyone quickly
+    // (6 s was too crowded in the 2,000-student server test)
+    _retry = Timer(Duration(milliseconds: 300 + _rnd.nextInt(20000)), connect);
   }
 
   void _onEndedEvent(dynamic _) {
