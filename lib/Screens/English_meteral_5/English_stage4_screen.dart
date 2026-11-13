@@ -357,7 +357,7 @@ class _EnglishStage4ScreenState extends State<EnglishStage4Screen> {
                             const SizedBox(width: 9),
                             Expanded(
                               child: Text(
-                                'Stage 4 — Correctness',
+                                'Stage 4 — Clarity',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(

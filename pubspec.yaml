@@ -93,8 +93,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/Frame icon.png
-    - assets/images/let's speak.png
-    - assets/images/logo4x.png
+    - assets/images/icon final one i full exitig.png
+    - assets/images/let'sspeak new logo with sir photo.png
     - assets/images/paymentqrcode.png
     - assets/images/final lets speak icon.png
     - assets/images/let's speak icon in.png
@@ -348,9 +348,9 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/final lets speak icon.png"
+  image_path: "assets/images/icon final one i full exitig.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/final lets speak icon.png"
+  adaptive_icon_foreground: "assets/images/icon final one i full exitig.png"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

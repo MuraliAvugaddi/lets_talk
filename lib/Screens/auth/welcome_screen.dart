@@ -98,7 +98,7 @@ class WelcomeScreen extends StatelessWidget {
                       height: logoSize,
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: surface,
+                        color: Colors.white, // logo has a white background → always white box
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(color: border),
                         boxShadow: [
@@ -112,7 +112,7 @@ class WelcomeScreen extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(23),
                         child: Image.asset(
-                          "assets/images/let's speak.png",
+                          "assets/images/let'sspeak new logo with sir photo.png", // also listed in pubspec.yaml
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(

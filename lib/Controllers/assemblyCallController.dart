@@ -402,6 +402,7 @@ class _AssemblyBubble extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: Obx(() {
+            
             ctrl.tick.value; // refresh once a second
             final live = ctrl.phase.value == AssemblyPhase.live;
             final micOn = live && ctrl.micOn;

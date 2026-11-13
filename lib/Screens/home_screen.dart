@@ -13,6 +13,7 @@ import 'package:lets_talk/Screens/widgets/assembly_join_screen.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/services/app_update_checker.dart';
 import 'package:lets_talk/services/class_reminder.dart';
+import 'package:lets_talk/services/stage_access.dart';
 
 // ============================================================
 // ENGLISH STAGE SCREENS
@@ -158,15 +159,13 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
   // 📢 Manager notice — AuthController keeps it live (socket + 30 s check)
   Future<void> fetchAdminNotification() => authController.fetchNotice();
 
-  bool _isStageLocked(String stageKey) {
-    final english = authController.userData['englishAccess'];
+  // 📚 study material: current stage OR finished stage (promoted / dropout)
+  bool _isStageLocked(String stageKey) =>
+      !StageAccess.material(authController.userData, 'English', stageKey);
 
-    if (english == null || english is! Map) {
-      return true;
-    }
-
-    return english[stageKey] != true;
-  }
+  // 🎙 live class: only the CURRENT stage (not finished stages, not dropouts)
+  bool _isLiveLocked(String stageKey) =>
+      !StageAccess.live(authController.userData, 'English', stageKey);
 
   int _unlockedStages() {
     int count = 0;
@@ -631,7 +630,7 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
         'isLocked': _isStageLocked('stage3'),
       },
       {
-        'title': 'Stage 4 – Correctness',
+        'title': 'Stage 4 – Clarity',
         'subtitle': 'Vocabulary Expansion',
         'description': 'Grow your vocabulary and confidence',
         'stageNum': 4,
@@ -669,47 +668,49 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
         'label': 'Stage 1',
         'stageNum': 1,
         'dest': const EnglishOnlineStage1Screen(),
-        'isLocked': _isStageLocked('stage1'),
+        'isLocked': _isLiveLocked('stage1'),
       },
       {
         'label': 'Stage 2',
         'stageNum': 2,
         'dest': const EnglishOnlineStage2Screen(),
-        'isLocked': _isStageLocked('stage2'),
+        'isLocked': _isLiveLocked('stage2'),
       },
       {
         'label': 'Stage 3',
         'stageNum': 3,
         'dest': const EnglishOnlineStage3Screen(),
-        'isLocked': _isStageLocked('stage3'),
+        'isLocked': _isLiveLocked('stage3'),
       },
       {
         'label': 'Stage 4',
         'stageNum': 4,
         'dest': const EnglishOnlineStage4Screen(),
-        'isLocked': _isStageLocked('stage4'),
+        'isLocked': _isLiveLocked('stage4'),
       },
       {
         'label': 'Stage 5',
         'stageNum': 5,
         'dest': const EnglishOnlineStage5Screen(),
-        'isLocked': _isStageLocked('stage5'),
+        'isLocked': _isLiveLocked('stage5'),
       },
       {
         'label': 'Stage 6',
         'stageNum': 6,
         'dest': const EnglishOnlineStage6Screen(),
-        'isLocked': _isStageLocked('stage6'),
+        'isLocked': _isLiveLocked('stage6'),
       },
       {
         'label': 'Stage 7',
         'stageNum': 7,
         'dest': const EnglishOnlineStage7Screen(),
-        'isLocked': _isStageLocked('stage7'),
+        'isLocked': _isLiveLocked('stage7'),
       },
     ]
         // offline student on an "online day": only the stages the admin moved online
         .where((e) => isOnlineStudent || classMode.rainCovers('stage${e['stageNum']}'))
+        // 🎓 finished stage → no "join class" (its material stays open below)
+        .where((e) => !StageAccess.finished(authController.userData, 'English', 'stage${e['stageNum']}'))
         .toList();
 
     return Column(
@@ -1119,13 +1120,14 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.teal.withValues(alpha: 0.10),
+                  color: AppColors.teal.withValues(alpha: isDark ? 0.20 : 0.10),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Text(
                   '$progressPercent%',
                   style: GoogleFonts.poppins(
-                    color: AppColors.blue,
+                    // 🌙 dark mode: bright teal (blue was hard to read on the dark card)
+                    color: isDark ? AppColors.teal : AppColors.blue,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1215,13 +1217,14 @@ class _LearnScreenState extends State<LearnScreen> with WidgetsBindingObserver {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.yellow.withValues(alpha: 0.13),
+                  color: AppColors.yellow.withValues(alpha: isDark ? 0.18 : 0.13),
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
                   'ONLINE',
                   style: GoogleFonts.poppins(
-                    color: AppColors.deepNavy,
+                    // 🌙 dark mode: yellow text (navy was invisible on the dark card)
+                    color: isDark ? AppColors.yellow : AppColors.deepNavy,
                     fontSize: 7.5,
                     fontWeight: FontWeight.w800,
                   ),

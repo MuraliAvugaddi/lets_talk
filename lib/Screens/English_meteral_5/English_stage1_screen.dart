@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/apis/api_endpoint.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
+import 'package:lets_talk/services/stage_access.dart';
 import 'package:path_provider/path_provider.dart';
 
 class EnglishStage1Screen extends StatelessWidget {
@@ -600,7 +601,10 @@ const double allowedRadius = 40.0;
 class StageAttendanceWidget extends StatefulWidget {
   final String stageName;
 
-  const StageAttendanceWidget({super.key, required this.stageName});
+  // language: 'Hindi' on Hindi screens → the server knows which course it is
+  final String language;
+
+  const StageAttendanceWidget({super.key, required this.stageName, this.language = 'English'});
 
   @override
   State<StageAttendanceWidget> createState() => _StageAttendanceWidgetState();
@@ -874,6 +878,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
         body: jsonEncode({
           "userId": userData['id'] ?? userData['_id'],
           "stage": widget.stageName,
+          "language": widget.language,
           "batchTime": currentBatchSlot ?? "General Batch",
           "lat": position.latitude,
           "lng": position.longitude,
@@ -920,7 +925,9 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
           .toString()
           .toLowerCase();
 
-      if (userMode != "offline") {
+      // 🎓 finished stage (promoted / dropout) → study material only, no attendance button
+      if (userMode != "offline" ||
+          !StageAccess.live(authController.userData, widget.language, StageAccess.key(widget.stageName))) {
         return const SizedBox.shrink();
       }
 

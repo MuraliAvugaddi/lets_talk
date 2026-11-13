@@ -43,7 +43,7 @@ class _HindiStage4ScreenState extends State<HindiStage4Screen> {
     final List<Map<String, dynamic>> daysData = [
       {
         "day": "Day 1",
-        "title": "Stage 4 Correctness Orientation & Demo",
+        "title": "Stage 4 Clarity Orientation & Demo",
         "subtitle": "Overview of correctness, continuous tenses and modals",
         "pdfPath": null,
         "isPractice": false,
@@ -295,7 +295,7 @@ class _HindiStage4ScreenState extends State<HindiStage4Screen> {
                             const SizedBox(width: 9),
                             Expanded(
                               child: Text(
-                                'Stage 4 — Correctness (Hindi)',
+                                'Stage 4 — Clarity (Hindi)',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
@@ -338,7 +338,7 @@ class _HindiStage4ScreenState extends State<HindiStage4Screen> {
               ),
 
               // Pinned / Non-scrolling Attendance Widget
-              const StageAttendanceWidget(stageName: 'Stage 4'),
+              const StageAttendanceWidget(stageName: 'Stage 4', language: 'Hindi'),
 
               // Scrollable area for Course Hero and Lessons wrapped with RefreshIndicator
               Expanded(
@@ -508,7 +508,7 @@ class _HindiStage4ScreenState extends State<HindiStage4Screen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Day 1 is an interactive Stage 4 Correctness Orientation & Demo session conducted live by the teacher. No PDF reading is required.',
+                'Day 1 is an interactive Stage 4 Clarity Orientation & Demo session conducted live by the teacher. No PDF reading is required.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   color: secondary,

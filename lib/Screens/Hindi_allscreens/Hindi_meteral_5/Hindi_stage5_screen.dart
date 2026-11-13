@@ -355,7 +355,7 @@ class _HindiStage5ScreenState extends State<HindiStage5Screen> {
               ),
 
               // Pinned / Non-scrolling Attendance Widget
-              const StageAttendanceWidget(stageName: 'Stage 5'),
+              const StageAttendanceWidget(stageName: 'Stage 5', language: 'Hindi'),
 
               // Scrollable area for Course Hero and Lessons wrapped with RefreshIndicator
               Expanded(

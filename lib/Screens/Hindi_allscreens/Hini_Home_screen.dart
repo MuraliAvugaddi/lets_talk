@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:lets_talk/Controllers/authContoller.dart';
 import 'package:lets_talk/Controllers/classModeController.dart';
+import 'package:lets_talk/services/stage_access.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage1_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage2_screen.dart';
 import 'package:lets_talk/Screens/Hindi_allscreens/Hindi_meteral_5/Hindi_stage3_screen.dart';
@@ -80,11 +81,11 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
     ]);
   }
 
-  bool _isLocked(String key) {
-    final hindi = authController.userData['hindiAccess'];
-    if (hindi == null || hindi is! Map) return true;
-    return hindi[key] != true;
-  }
+  // 📚 study material: current stage OR finished stage (promoted / dropout)
+  bool _isLocked(String key) => !StageAccess.material(authController.userData, 'Hindi', key);
+
+  // 🎙 live class: only the CURRENT stage
+  bool _isLiveLocked(String key) => !StageAccess.live(authController.userData, 'Hindi', key);
 
   int _unlockedCount() {
     var count = 0;
@@ -233,7 +234,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
         'destination': const HindiStage3Screen(),
       },
       {
-        'title': 'Stage 4 – Correctness',
+        'title': 'Stage 4 – Clarity',
         'subtitle': 'Vocabulary Expansion',
         'description': 'Grow your everyday vocabulary',
         'icon': Icons.auto_stories_rounded,
@@ -276,7 +277,7 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
         'destination': const HindiOnlineStage3Screen(),
       },
       {
-        'label': 'Stage 4 – Correctness',
+        'label': 'Stage 4 – Clarity',
         'destination': const HindiOnlineStage4Screen(),
       },
       {
@@ -343,7 +344,12 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
                                 text: text,
                                 secondary: secondary,
                                 border: border,
-                                stages: onlineStages,
+                                // 🎓 finished stages → no "join class" (material stays open below)
+                                stages: [
+                                  for (var i = 0; i < onlineStages.length; i++)
+                                    if (!StageAccess.finished(authController.userData, 'Hindi', 'stage${i + 1}'))
+                                      {...onlineStages[i], 'number': i + 1},
+                                ],
                               ),
                               const SizedBox(height: 24),
                               _buildSectionHeader(
@@ -817,8 +823,8 @@ class _HindiMainScreenState extends State<HindiMainScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final item = stages[index];
-                final number = index + 1;
-                final locked = _isLocked('stage$number');
+                final number = (item['number'] as int?) ?? index + 1;
+                final locked = _isLiveLocked('stage$number');
 
                 return _buildOnlineStage(
                   context,

@@ -2169,6 +2169,18 @@ class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
   }
 
   Future<void> _startUpload() async {
+    // 🚪 dropout → classes paused, no fee is taken
+    if (auth.userData['isDropout'] == true) {
+      Get.snackbar(
+        "Classes paused",
+        "No fee is due while your classes are paused. Please contact the institute to rejoin.",
+        backgroundColor: AppColors.yellow,
+        colorText: AppColors.text,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(14),
+      );
+      return;
+    }
     final XFile? image = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 75);
     if (image == null || !mounted) return;
     final language = await _askLanguage(image);

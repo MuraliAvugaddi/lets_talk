@@ -180,7 +180,7 @@ class _HindiStage7ScreenState extends State<HindiStage7Screen> {
               ),
 
               // Pinned / Non-scrolling Attendance Widget
-              const StageAttendanceWidget(stageName: 'Stage 7'),
+              const StageAttendanceWidget(stageName: 'Stage 7', language: 'Hindi'),
 
               // Scrollable area featuring the "Coming Soon" state with pull-to-refresh
               Expanded(
