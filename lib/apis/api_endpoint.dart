@@ -1,11 +1,11 @@
 class ApiEndpoints {
-  //   static const String baseUrl = "https://api.letsspeakglobal.com/api";
-  // static const String socketUrl = "https://api.letsspeakglobal.com";
+    static const String baseUrl = "https://api.letsspeakglobal.com/api";
+  static const String socketUrl = "https://api.letsspeakglobal.com";
   // static const String baseUrl = "http://192.168.1.3:5001/api";
 
   // static const String socketUrl = "http://192.168.1.3:5001";
-  static const String baseUrl = "http://192.168.1.14:5001/api";
-    static const String socketUrl = "http://192.168.1.14:5001";
+  // static const String baseUrl = "http://192.168.1.14:5001/api";
+  //   static const String socketUrl = "http://192.168.1.14:5001";
 
 
   // Auth & Profile
