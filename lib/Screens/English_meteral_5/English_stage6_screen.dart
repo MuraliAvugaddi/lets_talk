@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';import 'package:lets_talk/Screens/app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lets_talk/Screens/app_colors.dart';
 import 'package:lets_talk/Screens/widgets/StageAttendanceWidget.dart';
 
 
@@ -45,6 +46,7 @@ class _EnglishStage6ScreenState extends State<EnglishStage6Screen> {
       child: Scaffold(
         backgroundColor: background,
         body: SafeArea(
+          top: false, // 🎨 blue header goes behind the status bar (Android 15)
           bottom: false,
           child: Column(
             children: [
@@ -59,7 +61,13 @@ class _EnglishStage6ScreenState extends State<EnglishStage6Screen> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  // status bar height + 8 → header text stays below the clock
+                  padding: EdgeInsets.fromLTRB(
+                    10,
+                    MediaQuery.paddingOf(context).top + 8,
+                    10,
+                    10,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

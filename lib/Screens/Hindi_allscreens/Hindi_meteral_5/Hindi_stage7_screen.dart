@@ -51,6 +51,7 @@ class _HindiStage7ScreenState extends State<HindiStage7Screen> {
       child: Scaffold(
         backgroundColor: background,
         body: SafeArea(
+          top: false, // 🎨 blue header goes behind the status bar (Android 15)
           bottom: false,
           child: Column(
             children: [
@@ -65,7 +66,13 @@ class _HindiStage7ScreenState extends State<HindiStage7Screen> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  // status bar height + 8 → header text stays below the clock
+                  padding: EdgeInsets.fromLTRB(
+                    10,
+                    MediaQuery.paddingOf(context).top + 8,
+                    10,
+                    10,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -180,7 +187,10 @@ class _HindiStage7ScreenState extends State<HindiStage7Screen> {
               ),
 
               // Pinned / Non-scrolling Attendance Widget
-              const StageAttendanceWidget(stageName: 'Stage 7', language: 'Hindi'),
+              const StageAttendanceWidget(
+                stageName: 'Stage 7',
+                language: 'Hindi',
+              ),
 
               // Scrollable area featuring the "Coming Soon" state with pull-to-refresh
               Expanded(

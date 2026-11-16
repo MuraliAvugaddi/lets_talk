@@ -271,6 +271,7 @@ class _EnglishStage4ScreenState extends State<EnglishStage4Screen> {
       child: Scaffold(
         backgroundColor: background,
         body: SafeArea(
+          top: false, // 🎨 blue header goes behind the status bar (Android 15)
           bottom: false,
           child: Column(
             children: [
@@ -285,7 +286,13 @@ class _EnglishStage4ScreenState extends State<EnglishStage4Screen> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                  // status bar height + 8 → header text stays below the clock
+                  padding: EdgeInsets.fromLTRB(
+                    10,
+                    MediaQuery.paddingOf(context).top + 8,
+                    10,
+                    10,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1009,12 +1016,19 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       child: Scaffold(
         backgroundColor: background,
         body: SafeArea(
+          top: false, // 🎨 blue header goes behind the status bar (Android 15)
           bottom: false,
           child: Column(
             children: [
               Container(
-                height: 58,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                // status bar height + 58 → blue also behind the clock
+                height: 58 + MediaQuery.paddingOf(context).top,
+                padding: EdgeInsets.fromLTRB(
+                  8,
+                  MediaQuery.paddingOf(context).top,
+                  8,
+                  0,
+                ),
                 decoration: const BoxDecoration(color: AppColors.navy),
                 child: Row(
                   children: [

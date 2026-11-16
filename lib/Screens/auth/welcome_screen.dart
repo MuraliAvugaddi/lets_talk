@@ -133,62 +133,40 @@ class WelcomeScreen extends StatelessWidget {
 
                     SizedBox(height: compact ? 22 : 28),
 
-                    Text(
-                      'Speak with confidence.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: text,
-                        fontSize: compact ? 27 : 30,
-                        fontWeight: FontWeight.w700,
-                        height: 1.12,
-                        letterSpacing: -0.7,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
+                    // 🎓 Title
                     RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
+                        style: GoogleFonts.poppins(
+                          fontSize: compact ? 27 : 30,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
+                          letterSpacing: -0.6,
+                        ),
                         children: [
                           TextSpan(
-                            text: 'Learn ',
-                            style: GoogleFonts.poppins(
-                              color: secondary,
-                              fontSize: 13,
-                            ),
+                            text: 'Speak With ',
+                            style: TextStyle(color: text),
                           ),
-                          TextSpan(
-                            text: 'English',
-                            style: GoogleFonts.poppins(
-                              color: navy,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' & ',
-                            style: GoogleFonts.poppins(
-                              color: secondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'Hindi',
-                            style: GoogleFonts.poppins(
-                              color: teal,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' with ease.',
-                            style: GoogleFonts.poppins(
-                              color: secondary,
-                              fontSize: 13,
-                            ),
+                          const TextSpan(
+                            text: 'Surendra',
+                            style: TextStyle(color: teal),
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // ✨ Tagline
+                    Text(
+                      'Shaping Futures Through Language Skills',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        color: secondary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
                       ),
                     ),
 

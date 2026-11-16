@@ -15,7 +15,9 @@
     <!-- Required Foreground Services for Audio-Only Background & VoIP Calls -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- 🔋 screen off during class → keep CPU + Wi-Fi awake -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- ⏰ Class reminders (5 min before class) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -64,6 +66,13 @@
             </intent-filter>
         </activity>
         
+        <!-- 🛟 Live class keeps running in the background (mic + sound), shows "Live class is on" -->
+        <service
+            android:name=".ClassAudioService"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="microphone|mediaPlayback" />
+
         <!-- ⏰ Class reminders: show scheduled notifications + keep them after a phone restart -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">

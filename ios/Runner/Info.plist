@@ -57,5 +57,13 @@
     <string>This app needs access to location when open to mark your attendance.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>This app needs access to location when in the background.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used to speak in your live English and Hindi classes.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Bluetooth is used to hear your live class on Bluetooth earphones.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>
