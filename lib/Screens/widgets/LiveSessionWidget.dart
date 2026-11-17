@@ -239,13 +239,19 @@ class GlobalAudioOverlayController {
     String className, {
     LiveSessionWidget? widgetRef,
   }) {
-    if (_overlayEntry != null) return;
+    // already showing → nothing to do (an old, detached bubble is cleared)
+    if (_overlayEntry != null && _overlayEntry!.mounted) return;
+    _overlayEntry = null;
+
+    // 🫧 Put the bubble on the APP's main overlay (not the class screen's),
+    // so it stays when the class screen closes (back button / back swipe).
+    final overlayState = Get.key.currentState?.overlay ?? Overlay.maybeOf(context, rootOverlay: true);
+    if (overlayState == null) return;
+
     currentCall = call;
     currentUserId = userId;
     currentClassName = className;
     activeWidgetRef = widgetRef;
-
-    final overlayState = Overlay.of(context);
 
     _overlayEntry = OverlayEntry(
       builder: (context) => const FloatingAudioPiPWidget(),
@@ -1560,6 +1566,7 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     _netTimer?.cancel();
     _missingTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _bubbleIfStillInClass(); // 🫧 class still running → bubble on the home page
     super.dispose();
   }
 
@@ -1815,8 +1822,13 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
     }
   }
 
+  // 🫧 Minimize: back button, back SWIPE (left or right edge), arrow or
+  // "Minimize" → bubble first, then home. The class keeps running.
+  bool _minimizing = false;
+
   void _minimize() {
-    Get.until((route) => route.isFirst);
+    if (_minimizing || _isExiting) return;
+    _minimizing = true;
     GlobalAudioOverlayController.showOverlay(
       context,
       widget.call,
@@ -1824,6 +1836,30 @@ class _StudentAudioRoomScreenState extends State<StudentAudioRoomScreen>
       "Live Class",
       widgetRef: widget.widgetRef,
     );
+    // go home on the next frame (never in the middle of the back gesture)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.until((route) => route.isFirst);
+    });
+  }
+
+  /// Safety net: the class screen closed some other way while the class is
+  /// still running → show the bubble anyway, so the student can always get back.
+  void _bubbleIfStillInClass() {
+    if (_isExiting || ClassSwitcher.isSwitching(widget.call)) return;
+    if (!StreamManager.inCall || GlobalAudioOverlayController.currentCall != null) return;
+    final s = widget.call.state.value;
+    if (s.endedAt != null || s.status.isDisconnected) return;
+    final call = widget.call;
+    final userId = widget.userId;
+    final ref = widget.widgetRef;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (GlobalAudioOverlayController.currentCall != null || !StreamManager.inCall) return;
+      final st = call.state.value;
+      if (st.endedAt != null || st.status.isDisconnected) return;
+      final ctx = Get.overlayContext ?? Get.context;
+      if (ctx == null) return;
+      GlobalAudioOverlayController.showOverlay(ctx, call, userId, "Live Class", widgetRef: ref);
+    });
   }
 
   void _confirmLeaveClass() {
