@@ -447,6 +447,7 @@ body: jsonEncode({
 "mode": selectedMode,
 "batchTime": selectedBatch.value,
 "otpToken": otpToken, // 🔐 proof that this phone number was verified
+"app": "student",
 }),
 );
 
@@ -509,6 +510,7 @@ try {
     body: jsonEncode({
       "phone": loginPhoneController.text.trim(),
       "password": loginPasswordController.text,
+      "app": "student", // 👥 trainer's number → open the STUDENT account
     }),
   );
 
@@ -608,6 +610,7 @@ try {
       "phone": forgotPhoneController.text.trim(),
       "newPassword": newPasswordController.text,
       "otpToken": otpToken,
+      "app": "student", // 👥 only the student account's password changes
     }),
   );
 

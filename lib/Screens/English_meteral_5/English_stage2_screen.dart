@@ -901,7 +901,7 @@ class _StageAttendanceWidgetState extends State<StageAttendanceWidget> {
       final userData = authController.userData;
       final response = await http.post(
         Uri.parse(ApiEndpoints.markAttendance),
-        headers: {"Content-Type": "application/json"},
+        headers: ApiHeaders.json(), // 🔐 login token (server needs it)
         body: jsonEncode({
           "userId": userData['id'] ?? userData['_id'],
           "stage": widget.stageName,
