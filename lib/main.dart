@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lets_talk/rtc/class_sound.dart'; // 📺 class small window
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -59,6 +60,8 @@ class MyApp extends StatelessWidget {
         Get.find<ThemeController>();
 
     return GetMaterialApp(
+      // 📺 class as a small window on top of WhatsApp / other apps
+      builder: (context, child) => ClassPipView(child: child),
       title: "Let's Speak Student",
       debugShowCheckedModeBanner: false,
 

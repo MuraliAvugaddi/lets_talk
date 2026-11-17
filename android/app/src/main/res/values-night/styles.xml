@@ -13,7 +13,8 @@
     </style>
     <!-- Behind Flutter while it starts and runs -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">@android:color/white</item>
+        <!-- 📺 dark behind the class small window (no white flash) -->
+        <item name="android:windowBackground">#FF0E2F48</item>
         <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
